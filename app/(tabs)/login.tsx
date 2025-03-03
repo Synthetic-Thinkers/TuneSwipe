@@ -1,8 +1,6 @@
-import { Text, View, StyleSheet, Pressable } from "react-native";
-import React, {useEffect} from "react";
-// import { makeRedirectUri, useAuthRequest } from 'expo-auth-session';
-import * as AppAuth from 'expo-auth-session';
-// import * as AppAuth from "expo-app-auth";
+import { Text, View, StyleSheet, Pressable, FlatList, Button } from "react-native";
+import React, {useEffect, useState} from "react";
+import * as Auth from 'expo-auth-session';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const discovery = {
@@ -11,17 +9,18 @@ const discovery = {
 };
 
 export default function login() {
-	console.log("btn pressed!")
+	//Array of top five artists
+	const [topArtists, setTopArtists] = useState([]);
 
-	const [request, response, promptAsync] = AppAuth.useAuthRequest(
+	const [request, response, promptAsync] = Auth.useAuthRequest(
 	{
-		responseType: AppAuth.ResponseType.Token,
+		responseType: Auth.ResponseType.Token,
       	clientId: "71512c4b7d2e4f71bb4c2c5130e3aa9a",
-      	//clientSecret: "44f84f859364402a97c183f6259a288a",
       	scopes: [
         	"user-read-currently-playing",
         	"user-read-recently-played",
         	"user-read-playback-state",
+			"user-library-read",
         	"user-top-read",
         	"user-modify-playback-state",
         	"streaming",
@@ -38,37 +37,59 @@ useEffect (() => {
 	console.log("-- From useEffect --")
 	if(response?.type == "success") {
 		const {access_token}= response.params;
-		console.log('accessToken = ', access_token)
+		console.log('accessToken = ', access_token);
+		getTopArtists(access_token);
 	}
 }, [response]);
 
-	return (
-		<View style = {styles.container}>
-			<Text style = {styles.text}>Login Screen</Text>
+const getTopArtists = async (token: string) => {
+	console.log("-- From getTopArtists --");
+	//console.log("Token Value =", token);
+	try{
+		const resultFromCall = await fetch("https://api.spotify.com/v1/me/top/artists?limit=5", {
+			method: "GET",
+			headers: { 
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json",
+			},
+});
+	const jsonData = await resultFromCall.json();
+	const artists = jsonData.items.map((artist) => artist.name);
+	console.log("Top 5 artists:", artists);
+	setTopArtists(artists);
+
+	} catch (error) {
+		console.error("ERROR - Could not get top artists.")
+	}
+};
+
+return (
+	<View style = {styles.container}>
+		<Text style = {{height: 80}}>Login Screen</Text>
 		
-		<View style={{height: 80}} />
-		<Pressable
-		onPress={() => promptAsync()}
-			style={{
-				backgroundColor: "#32cd32",
-				width: 350,
-				alignItems: "center",
-			}}
-		>
-			<Text>Sign in with Spotify</Text>
-		</Pressable>
+		<View style={styles.button}>
+		<Button 
+			title="Sign in with Spotify" 
+			color= "white"
+			onPress={() => promptAsync()} 
+		/> 
 		</View>
-	);
+	</View>	
+);
 }
-  
+
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		backgroundColor: '#25292e',
+		backgroundColor: '#f0f8ff',
 		justifyContent: 'center',
 		alignItems: 'center',
 	},
 	text: {
-		color: '#fff',
+		color: '#000000',
 	},
+	button: {
+		borderRadius: 10,
+		backgroundColor: "black"
+	}
 });
