@@ -1,7 +1,10 @@
 import { Text, View, StyleSheet, Pressable, FlatList, Button } from "react-native";
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useState, useRef, useCallback} from "react";
 import * as Auth from 'expo-auth-session';
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import BottomSheet, {BottomSheetView} from "@gorhom/bottom-sheet"
+import { useReducedMotion } from "react-native-reanimated";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 const discovery = {
 	authorizationEndpoint: "https://accounts.spotify.com/authorize",
@@ -11,6 +14,13 @@ const discovery = {
 export default function login() {
 	//Array of top five artists
 	const [topArtists, setTopArtists] = useState([]);
+	const sheetRef = useRef<BottomSheet>(null);
+	const [isOpen, setIOpen] = useState(true);
+	const handleSanpPress = useCallback((index: number) => {
+		sheetRef.current?.snapToIndex(index);
+		setIOpen(true);
+	}, []);
+	const snapPoints = ["50%"];
 
 	const [request, response, promptAsync] = Auth.useAuthRequest(
 	{
@@ -64,24 +74,48 @@ const getTopArtists = async (token: string) => {
 };
 
 return (
-	<View style = {styles.container}>
-		<Text style = {{height: 80}}>Login Screen</Text>
-		
-		<View style={styles.button}>
-		<Button 
-			title="Sign in with Spotify" 
-			color= "white"
-			onPress={() => promptAsync()} 
-		/> 
-		</View>
-	</View>	
+	<GestureHandlerRootView style ={{flex:1}}>
+		<View style = {styles.container}>
+			<Text style = {{height: 80}}>Login Screen</Text>
+
+			<View style={styles.button}>
+				<Button 
+					title="Start Now" 
+					color= "white"
+					onPress={() => handleSanpPress(0)} 
+				/>
+			</View>
+
+			<BottomSheet
+				ref={sheetRef}
+				snapPoints={snapPoints}
+				enablePanDownToClose={true}
+				onClose={() => setIOpen(false)}
+			>
+				<BottomSheetView>
+					<Text style={{fontSize: 25, height:35}}> Get Started</Text>
+					<Text style={{fontSize: 16, height:100}}> Login with Spofity and let the magic begin ... </Text>
+				
+					<View style={styles.buttonSpotify}>
+						<Button 
+							title= "Sign in with Spotify" 
+							color= "white"
+							onPress={() => promptAsync()} 
+						/> 
+					</View>
+				
+				</BottomSheetView>
+			</BottomSheet>
+
+		</View>	
+	</GestureHandlerRootView>
 );
 }
 
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		backgroundColor: '#f0f8ff',
+		backgroundColor: '#black',
 		justifyContent: 'center',
 		alignItems: 'center',
 	},
@@ -90,6 +124,21 @@ const styles = StyleSheet.create({
 	},
 	button: {
 		borderRadius: 10,
-		backgroundColor: "black"
+		width: "30%",
+		backgroundColor: "black",
+	},
+	buttonSpotify: {
+		borderRadius: 10,
+		backgroundColor: "black",
+		width: "50%",
+		justifyContent: 'center',
+		alignItems: 'center',
 	}
 });
+
+{/* <View style={styles.button}>
+			<Button 
+				title="Sign in with Spotify" 
+				color= "white"
+				onPress={() => promptAsync()} 
+			/>  */}
