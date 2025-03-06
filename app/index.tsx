@@ -6,7 +6,8 @@ import BottomSheet, {BottomSheetView} from "@gorhom/bottom-sheet"
 import { useReducedMotion } from "react-native-reanimated";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useRouter } from "expo-router";
-//import {CLIENT_ID, AUTH_ENDPOINT, TOKEN_ENDPOINT, REDIRECT_URL, USER_DOMAIN} from "@env";
+import { supabase } from '../supabase';
+// import {CLIENT_ID, AUTH_ENDPOINT, TOKEN_ENDPOINT, REDIRECT_URL, USER_DOMAIN} from "@env";
 
 const discovery = {
 	authorizationEndpoint: "https://accounts.spotify.com/authorize",
@@ -72,9 +73,43 @@ const getUser = async (token: string) => {
 				Authorization: `Bearer ${token}`,
 				"Content-Type": "application/json",
 			},
-});
-	const jsonData = await resultFromCall.json();
-	console.log("Signed in user UserID: ", jsonData.id);
+		});
+		const jsonData = await resultFromCall.json();
+		const spotifyID = jsonData.id;
+		console.log("Signed in user UserID: ", spotifyID);
+
+		if (!spotifyID){
+			console.error("Error - Could not get Spotify ID");
+			return;
+		}
+
+		// Check if spotifyID exists in User table
+		let {data: User, error} = await supabase
+			.from('User')
+			.select('*')
+			.eq('spotifyID', spotifyID)
+			.single();
+		
+		if (User) {
+			console.log("User already exists in Supabase.");
+		} 
+		else {
+			// Insert new user
+			const { data, error: insertError } = await supabase
+  				.from('User')
+  				.insert([
+    				{ spotifyID: spotifyID},
+  				])
+  				.select()
+			
+			if (insertError) {
+				console.error("ERROR - Could not insert user:", insertError.message);
+			}
+			else {
+				console.log("New user added to Supabase!");
+			}
+		}
+		
 	} catch (error) {
 		console.error("ERROR - Could not get user.")
 	}
