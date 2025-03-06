@@ -1,21 +1,27 @@
-import { Text, View, StyleSheet, Pressable, FlatList, Button } from "react-native";
+import { Text, View, StyleSheet, Pressable, ImageBackground, Button } from "react-native";
 import React, {useEffect, useState, useRef, useCallback} from "react";
 import * as Auth from 'expo-auth-session';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import BottomSheet, {BottomSheetView} from "@gorhom/bottom-sheet"
 import { useReducedMotion } from "react-native-reanimated";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { useRouter } from "expo-router";
+//import {CLIENT_ID, AUTH_ENDPOINT, TOKEN_ENDPOINT, REDIRECT_URL, USER_DOMAIN} from "@env";
 
 const discovery = {
 	authorizationEndpoint: "https://accounts.spotify.com/authorize",
 	tokenEndpoint: "https://accounts.spotify.com/api/token",
+	// authorizationEndpoint: AUTH_ENDPOINT,
+	// tokenEndpoint: TOKEN_ENDPOINT,
 };
 
+let successfulAuth = false;
+
 export default function login() {
-	//Array of top five artists
-	const [topArtists, setTopArtists] = useState([]);
+	const backgroundImage = require('../assets/images/TuneSwipe_Background.png');
+	const router = useRouter();
 	const sheetRef = useRef<BottomSheet>(null);
-	const [isOpen, setIOpen] = useState(true);
+	const [isOpen, setIOpen] = useState(false);
 	const handleSanpPress = useCallback((index: number) => {
 		sheetRef.current?.snapToIndex(index);
 		setIOpen(true);
@@ -26,6 +32,7 @@ export default function login() {
 	{
 		responseType: Auth.ResponseType.Token,
       	clientId: "71512c4b7d2e4f71bb4c2c5130e3aa9a",
+		//clientId: CLIENT_ID,
       	scopes: [
         	"user-read-currently-playing",
         	"user-read-recently-played",
@@ -39,6 +46,7 @@ export default function login() {
       ],
       usePKCE: false,
       redirectUri: "exp://127.0.0.1:19000/",
+	  //redirectUri: REDIRECT_URL,
     },
 	discovery
 );
@@ -48,15 +56,17 @@ useEffect (() => {
 	if(response?.type == "success") {
 		const {access_token}= response.params;
 		console.log('accessToken = ', access_token);
-		getTopArtists(access_token);
+    	successfulAuth = true;
+		getUser(access_token);
+    	router.replace("/(tabs)/library")
 	}
 }, [response]);
 
-const getTopArtists = async (token: string) => {
-	console.log("-- From getTopArtists --");
+const getUser = async (token: string) => {
+	console.log("-- From getUser --");
 	//console.log("Token Value =", token);
 	try{
-		const resultFromCall = await fetch("https://api.spotify.com/v1/me/top/artists?limit=5", {
+		const resultFromCall = await fetch("https://api.spotify.com/v1/me", {
 			method: "GET",
 			headers: { 
 				Authorization: `Bearer ${token}`,
@@ -64,18 +74,15 @@ const getTopArtists = async (token: string) => {
 			},
 });
 	const jsonData = await resultFromCall.json();
-	const artists = jsonData.items.map((artist) => artist.name);
-	console.log("Top 5 artists:", artists);
-	setTopArtists(artists);
-
+	console.log("Signed in user UserID: ", jsonData.id);
 	} catch (error) {
-		console.error("ERROR - Could not get top artists.")
+		console.error("ERROR - Could not get user.")
 	}
 };
 
 return (
 	<GestureHandlerRootView style ={{flex:1}}>
-		<View style = {styles.container}>
+		<ImageBackground source={backgroundImage} style = {styles.container}>
 			<Text style = {{height: 80}}>Login Screen</Text>
 
 			<View style={styles.button}>
@@ -90,6 +97,7 @@ return (
 				ref={sheetRef}
 				snapPoints={snapPoints}
 				enablePanDownToClose={true}
+				index={-1}
 				onClose={() => setIOpen(false)}
 			>
 				<BottomSheetView>
@@ -103,11 +111,9 @@ return (
 							onPress={() => promptAsync()} 
 						/> 
 					</View>
-				
 				</BottomSheetView>
 			</BottomSheet>
-
-		</View>	
+		</ImageBackground>	
 	</GestureHandlerRootView>
 );
 }
@@ -135,10 +141,3 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 	}
 });
-
-{/* <View style={styles.button}>
-			<Button 
-				title="Sign in with Spotify" 
-				color= "white"
-				onPress={() => promptAsync()} 
-			/>  */}
