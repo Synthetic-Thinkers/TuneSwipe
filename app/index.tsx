@@ -7,13 +7,10 @@ import { useReducedMotion } from "react-native-reanimated";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useRouter } from "expo-router";
 import { supabase } from '../supabase';
-// import {CLIENT_ID, AUTH_ENDPOINT, TOKEN_ENDPOINT, REDIRECT_URL, USER_DOMAIN} from "@env";
 
 const discovery = {
-	authorizationEndpoint: "https://accounts.spotify.com/authorize",
-	tokenEndpoint: "https://accounts.spotify.com/api/token",
-	// authorizationEndpoint: AUTH_ENDPOINT,
-	// tokenEndpoint: TOKEN_ENDPOINT,
+	authorizationEndpoint: process.env.EXPO_PUBLIC_AUTH_ENDPOINT,
+	tokenEndpoint: process.env.EXPO_PUBLIC_TOKEN_ENDPOINT,
 };
 
 let successfulAuth = false;
@@ -32,8 +29,7 @@ export default function login() {
 	const [request, response, promptAsync] = Auth.useAuthRequest(
 	{
 		responseType: Auth.ResponseType.Token,
-      	clientId: "71512c4b7d2e4f71bb4c2c5130e3aa9a",
-		//clientId: CLIENT_ID,
+		clientId: process.env.EXPO_PUBLIC_CLIENT_ID,
       	scopes: [
         	"user-read-currently-playing",
         	"user-read-recently-played",
@@ -46,14 +42,12 @@ export default function login() {
         	"user-read-private",
       ],
       usePKCE: false,
-      redirectUri: "exp://127.0.0.1:19000/",
-	  //redirectUri: REDIRECT_URL,
+	  redirectUri: process.env.EXPO_PUBLIC_REDIRECT_URL,
     },
 	discovery
 );
 
 useEffect (() => {
-	console.log("-- From useEffect --")
 	if(response?.type == "success") {
 		const {access_token}= response.params;
 		console.log('accessToken = ', access_token);
@@ -65,9 +59,8 @@ useEffect (() => {
 
 const getUser = async (token: string) => {
 	console.log("-- From getUser --");
-	//console.log("Token Value =", token);
 	try{
-		const resultFromCall = await fetch("https://api.spotify.com/v1/me", {
+		const resultFromCall = await fetch(process.env.EXPO_PUBLIC_USER_DOMAIN, {
 			method: "GET",
 			headers: { 
 				Authorization: `Bearer ${token}`,
