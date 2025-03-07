@@ -6,7 +6,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 
 
-export default function SwipeScreen() {
+
+export default function IndexScreen({ navigation }) {
+  const onPressStart = () => navigation.navigate("Options");
+
   const [fontsLoaded] = useFonts({
     Inter_400Regular, // Regular Weight
     Inter_600SemiBold, // Extra Bold Weight
@@ -17,10 +20,6 @@ export default function SwipeScreen() {
     // Show loading text until fonts are loaded
     return <Text>Loading...</Text>;
   }
-
-  const handleTap = () => {
-    console.log('Start swiping ...');
-  };
 
   const onPressSongs = () => {
     Alert.alert('You selected Songs!');
@@ -39,7 +38,7 @@ export default function SwipeScreen() {
   };
 
   return (
-    <TouchableOpacity style={styles.container} onPress={handleTap} activeOpacity={1}>
+    <TouchableOpacity style={styles.container} onPress={onPressStart} activeOpacity={1}>
       <View style={styles.container}>
         {/* Contains welcoming user with the user's name & displays the user's profile picture */}
         <View style={styles.userContainer}>

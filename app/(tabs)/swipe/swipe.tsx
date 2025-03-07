@@ -1,125 +1,77 @@
-import React from 'react';
-import { Text, View, StyleSheet, TouchableHighlight, Alert, Image, Dimensions } from 'react-native';
-import { useFonts, Inter_400Regular, Inter_600SemiBold } from '@expo-google-fonts/inter';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useState } from "react";
+import { View, Text, StyleSheet, Image, TouchableHighlight} from "react-native";
+import Swiper from 'react-native-deck-swiper';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from "@expo-google-fonts/inter";
+
+export default function SwipeScreen({ navigation }) {
+  const [index, setIndex] = useState(0);
+  // const [likedData, setLikedData] = useState([]);
 
 
-export default function SwipeScreen() {
   const [fontsLoaded] = useFonts({
-    Inter_400Regular, // Regular Weight
-    Inter_600SemiBold, // Extra Bold Weight
-  });
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Inter_800ExtraBold,
+      });
 
-  if (!fontsLoaded) {
-    // Show loading text until fonts are loaded
-    return <Text>Loading...</Text>;
+      if (!fontsLoaded) {
+        // Show loading text until fonts are loaded
+        return <Text>Loading...</Text>;
   }
 
 
-  const onPressSongs = () => {
-    Alert.alert('You selected Songs!');
-  };
+  const musicData = [
+    { id: 1, artist: "Don Toliver", title: 'BANDIT', genre: 'Hip-Hop + Rap', image: require('../../../assets/images/tempImage.jpg') },
+    { id: 2, artist: "Clario", title: 'Sexy to Someone', genre: 'Indie + Alternative + Folk', image: require('../../../assets/images/tempImage2.jpg') },
+    { id: 3, artist: 'The Weekend', title: 'Die For You', genre: 'Pop + R&B', image: require('../../../assets/images/tempImage3.jpg') },
+    { id: 4, artist: 'Artic Monkeys', title: 'R U Mine?', genre: 'Inide + Rock + R&B', image: require('../../../assets/images/tempImage4.jpg') }
+  ];
+  // const likedData = [];
 
-  const onPressArtists = () => {
-    Alert.alert('You selected Artists!');
-  };
+  const handleSwipeRight = (cardIndex) => {
+    console.log(`Liked: ${musicData[cardIndex].title}`);
+    // likedData.push(musicData[cardIndex]);
+    // setLikedData( musicData[cardIndex] );
+  }
 
-  const onPressGenres = () => {
-    Alert.alert('You selected Genres!');
-  };
+  const handleSwipeLeft = (cardIndex) => {
+    console.log(`Disliked: ${musicData[cardIndex].title}`);
+  }
 
-  const onPressHelp = () => {
-    Alert.alert('You selected Instructions!');
-  };
+  const handleSwipedAll = () => {
+    navigation.navigate('PlaylistLoading');  // Replace 'LoadingScreen' with your desired screen name
+  }
 
   return (
     <View style={styles.container}>
-      {/* Contains welcoming user with the user's name & displays the user's profile picture */}
-      <View style={styles.userContainer}>
-        {/* Contains making both username & user profile align in a row format */}
-        <View style={styles.rowContainer}>
-          {/* Contains a 'Welcome' text with the User's name */}
-          <View style={styles.userGreeting}>
-            <Text style={styles.text}>Welcome,</Text>
-            <Text style={styles.usersName}>User</Text>
-          </View>
-          {/* Contains a gradient outline around the user's profile picture */}
-          <View style={styles.profileContainer}>
-            <LinearGradient
-              colors={['rgba(131, 56, 236, 0.9)',
-                       'rgba(255, 0, 110, 0.9)',
-                       'rgba(58, 134, 255, 0.9)',
-                       'rgba(152, 245, 225, 0.9)']}
-              style={styles.gradient}
-              start={{ x: 0, y: 0.5 }}
-              end={{ x: 1, y: 0.5 }}
-              locations={[0, 0.3, 0.58, 1]}
-            >
-              <Image source={require('../../../assets/images/default-profile-picture.png')} style={styles.userPicture} />
-            </LinearGradient>
-          </View>
-        </View>
-      </View>
-      {/* Contains text, help icon, & all buttons */}
-      <View style={styles.selectionContainer}>
-        {/* Makes everything inside aligned in a row format */}
-        <View style={styles.rowContainer}>
-          <Text style={styles.selectText}>Select Your Choice:</Text>
-          {/* Help Icon to give users guidance */}
-          <TouchableHighlight onPress={onPressHelp} style={styles.helpButton} underlayColor='transparent'>
-            <Ionicons name="help-circle-outline" size={24} color='black' />
-          </TouchableHighlight>
-        </View>
-        {/* Songs Button */}
-        <TouchableHighlight style={styles.button} onPress={onPressSongs} underlayColor='#70A7FF'>
-          <LinearGradient
-            colors={['#98F5E1', '#3A86FF', '#A134BE']}
-            start={{ x: 0, y: 0 }} // Gradient starts from top-left
-            end={{ x: 1, y: 1 }} // Gradient ends at bottom-right
-            style={styles.gradientBackground}
-            locations={[ 0, 0.5, 1]}
-          >
-            <Text style={styles.buttonText}>Songs</Text>
-            <Image source={require('../../../assets/images/vinyls/TameImpalaVinyl.png')} style={styles.vinyl1} />
-            <Image source={require('../../../assets/images/vinyls/DrakeVinyl.png')} style={styles.vinyl2} />
-            <Image source={require('../../../assets/images/vinyls/ORVinyl.png')} style={styles.vinyl3} />
-          </LinearGradient>
-        </TouchableHighlight>
-        {/* Artists Button */}
-        <TouchableHighlight style={styles.button} onPress={onPressArtists} underlayColor='#70A7FF'>
-           <LinearGradient
-            colors={['#3A86FF', '#FF1493', '#A134BE']}
-            start={{ x: 0, y: 0 }} // Gradient starts from top-left
-            end={{ x: 1, y: 1 }} // Gradient ends at bottom-right
-            style={styles.gradientBackground}
-            locations={[ 0.1, 0.5, 1]}
-          >
-            <Text style={styles.artistsText}>Artists</Text>
-              <Image source={require('../../../assets/images/artists/DonToliver.png')} style={styles.artist1} />
-              <Image source={require('../../../assets/images/artists/BillieE.png')} style={styles.artist2} />
-              <Image source={require('../../../assets/images/artists/CharliXCX.png')} style={styles.artist3} />
-          </LinearGradient>
-        </TouchableHighlight>
-        {/* Genres Button */}
-        <TouchableHighlight style={styles.button} onPress={onPressGenres} underlayColor='#70A7FF'>
-           <LinearGradient
-            colors={['#FF69B4', '#FF006E', '#CF0101']}
-            start={{ x: 0, y: 0 }} // Gradient starts from top-left
-            end={{ x: 1, y: 1 }} // Gradient ends at bottom-right
-            style={styles.gradientBackground}
-            locations={[ 0.29, 0.77, 1]}
-          >
-            <Text style={styles.buttonText}>Genres</Text>
-            <Image source={require('../../../assets/images/genres/Dance.png')} style={styles.genre1} />
-            <Image source={require('../../../assets/images/genres/Folk.png')} style={styles.genre2} />
-            <Image source={require('../../../assets/images/genres/Indie.png')} style={styles.genre3} />
-            <Image source={require('../../../assets/images/genres/Jazz.png')} style={styles.genre4} />
-            <Image source={require('../../../assets/images/genres/Pop.png')} style={styles.genre5} />
-            <Image source={require('../../../assets/images/genres/Rock.png')} style={styles.genre6} />
-          </LinearGradient>
-          </TouchableHighlight>
-        </View>
+      <Swiper
+        cards={musicData}
+        renderCard={(card) => (
+          <View style={styles.cardContainer}>
+            <Image source={card.image} style={styles.image} />
+            <View style={styles.textContainer}>
+              <Text style={styles.songText}>{card.artist} - {card.title}</Text>
+              <Text style={styles.genreText}>{card.genre}</Text>
+            </View>
+            <View style={styles.choiceContainer}>
+              <View style={styles.rectangle}></View>
+              <Ionicons name="close-circle-outline" size={80} style={styles.dislikeIcon} />
+              <Ionicons name="heart-circle-outline" size={80} style={styles.likeIcon} />
+            </View>
+            </View>
+        )}
+        onSwipedRight={handleSwipeRight}
+        onSwipedLeft={handleSwipeLeft}
+        stackSize={4} // Shows 3 cards stacked
+        backgroundColor="transparent"
+        containerStyle={styles.swiperContainer}
+        cardIndex={index}
+        onSwiped={(swipeIndex) => setIndex(swipeIndex + 1)}
+        onSwipedAll={handleSwipedAll}
+      />
     </View>
   );
 }
@@ -127,195 +79,72 @@ export default function SwipeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#ffff',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  text: {
-    color: '#00000',
-    fontFamily: 'Inter_400Regular',
-    fontSize: 16,
+  swiperContainer: {
+    justifyContent: "center",
+    alignItems: "center",
   },
-  selectText: {
-    color: '#00000',
-    fontFamily: 'Inter_400Regular',
-    fontSize: 16,
-    marginLeft: 12,
-  },
-  selectionContainer: {
-    flexShrink: 0,
-  },
-  rowContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    marginBottom: 10,
-  },
-  userContainer: {
-    width: 392,
-    height: 130,
-    alignContent: 'center',
-    justifyContent: 'center',
-  },
-  userGreeting: {
-    width: 98,
-    height: 50,
-    paddingLeft: 24,
-    alignContent: 'center',
-  },
-  usersName: {
-    color: '#00000',
+  songText: {
     fontFamily: 'Inter_600SemiBold',
     fontSize: 24,
+    color: '#ffff',
   },
-  profileContainer: {
-    width: 75,
-    height: 75,
-    borderRadius: 75 / 2,
-    marginLeft: 220,
-  },
-  gradient: {
-    width: 75,
-    height: 75,
-    borderRadius: 75 / 2,
-  },
-  circle: {
-    width: 75,
-    height: 75,
-    borderRadius: 75 / 2,
-  },
-  userPicture: {
-    width: 75,
-    height: 75,
-    borderRadius: 75 / 2,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    overflow: 'hidden',
-  },
-  button: {
-    flexShrink: 0,
-    width: 383,
-    maxHeight: 153,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignContent: 'center',
-    margin: 13,
-    overflow: 'hidden',
-  },
-  buttonText: {
-    color: '#00000',
+  genreText: {
     fontFamily: 'Inter_400Regular',
-    fontSize: 16,
-    marginLeft: 58,
+    fontSize: 15,
+    color: '#ffff',
+    backgroundColor: 'black',
+    alignSelf: 'flex-start',
+    padding: 2,
+    borderRadius: 12,
   },
-  artistsText: {
-    color: '#00000',
-    fontFamily: 'Inter_400Regular',
-    fontSize: 16,
-    marginLeft: 273,
+  image: {
+    borderRadius: 8,
+    flex: 1,
+    width: 400,
+    maxHeight: 715,
   },
-  gradientBackground: {
-    width: 383 ,
-    height: 153,
-    justifyContent: 'center',
-    borderRadius: 30,
-    opacity: 0.95
+  cardContainer: {
+    flex: 1,
+    borderRadius: 8,
+    width: 400,
+    maxHeight: 730,
+    alignSelf: 'center',
+    bottom: 55,
+    overflow: "hidden",
   },
-  vinyl1: {
-    width: 104,
-    height: 103,
+  textContainer: {
     position: 'absolute',
-    left: 183,
-    resizeMode: 'contain',
+    top: 570,
   },
-  vinyl2: {
-    width: 104,
-    height: 103,
+  choiceContainer: {
+    width: 400,
+    height: 83,
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
     position: 'absolute',
-    left: 235,
-    resizeMode: 'contain',
+    top: 632,
   },
-  vinyl3: {
-    width: 104,
-    height: 103,
+  rectangle: {
+    backgroundColor: 'black',
+    width: 400,
+    height: 83,
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+    opacity: 0.4,
     position: 'absolute',
-    left: 280,
-    resizeMode: 'contain',
   },
-  artist1: {
-    width: 120,
-    height: 140,
+  dislikeIcon: {
+    color: '#CC0058',
     position: 'absolute',
-    top: 23,
-    resizeMode: 'contain',
+    left: 97,
   },
-  artist2: {
-    width: 115,
-    height: 130,
+  likeIcon: {
+    color: '#98F5E1',
     position: 'absolute',
-    top: 29,
-    left: 115,
-    resizeMode: 'contain',
-  },
-  artist3: {
-    width: 115,
-    height: 130,
-    position: 'absolute',
-    top: 31,
-    left: 62,
-    resizeMode: 'contain',
-  },
-  genre1: {
-    width: 50,
-    height: 50,
-    position: 'absolute',
-    top: 5,
-    left: 319,
-    resizeMode: 'contain',
-  },
-  genre2: {
-    width: 50,
-    height: 50,
-    position: 'absolute',
-    top: 5,
-    left: 208,
-    resizeMode: 'contain',
-  },
-  genre3: {
-    width: 50,
-    height: 50,
-    position: 'absolute',
-    top: 60,
-    left: 319,
-    resizeMode: 'contain',
-  },
-  genre4: {
-    width: 50,
-    height: 50,
-    position: 'absolute',
-    top: 40,
-    left: 255,
-    resizeMode: 'contain',
-  },
-  genre5: {
-    width: 50,
-    height: 50,
-    position: 'absolute',
-    top: 80,
-    left: 204,
-    resizeMode: 'contain',
-  },
-  genre6: {
-    width: 50,
-    height: 50,
-    position: 'absolute',
-    top: 100,
-    left: 280,
-    resizeMode: 'contain',
-  },
-   helpButton: {
-    marginLeft: 210,
-    flexShrink: 0,
-    padding: 5,
+    left: 216,
   },
 });
