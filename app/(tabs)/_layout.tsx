@@ -8,15 +8,7 @@ export default function TabLayout() {
         tabBarActiveTintColor: '#FF006E',
       }}
     >
-      <Tabs.Screen
-        name='index'
-        options={{
-          title: 'Listen',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'musical-notes' : 'musical-notes-outline'} color={color} size={24} />
-          ),
-        }}
-      />
+
       <Tabs.Screen
         name='swipe'
         options={{
@@ -26,6 +18,27 @@ export default function TabLayout() {
           ),
         }}
       />
+
+      <Tabs.Screen
+        name = 'activity'
+        options = {{
+          title: 'Activity',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'musical-notes' : 'musical-notes-outline'} color={color} size={24} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name='index'
+        options={{
+          title: 'Listen',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'musical-notes' : 'musical-notes-outline'} color={color} size={24} />
+          ),
+        }}
+      />
+      
        <Tabs.Screen
         name='library'
         options={{
@@ -35,6 +48,7 @@ export default function TabLayout() {
           ),
         }}
       />
+      
        <Tabs.Screen
         name='profile'
         options={{
