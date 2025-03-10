@@ -10,14 +10,13 @@ interface Song {
   title: string;
   artist: string;
   cover: any;
-  duration_ms?: number;
 }
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
-export default function App() {
+export default function PlayerScreen() {
   // Current playing song state
-  const [currentSong, setCurrentSong] = useState<Song>({
+  const [currentSong, setCurrentSong] = useState({
     id: '1',
     title: 'Good 4 U',
     artist: 'Olivia Rodrigo',
@@ -25,7 +24,7 @@ export default function App() {
   });
 
   // Queue state
-  const [queue, setQueue] = useState<Song[]>([
+  const [queue, setQueue] = useState([
     { id: '2', title: 'Sexy To Someone', artist: 'Clairo', cover: require('./assets/clairo_charm.jpeg') },
     { id: '3', title: 'Video Games', artist: 'Lana Del Rey', cover: require('./assets/lana.jpeg') },
     { id: '4', title: 'Die For You', artist: 'The Weeknd', cover: require('./assets/theweeknd.jpeg') },
@@ -41,9 +40,53 @@ export default function App() {
   const [totalTime, setTotalTime] = useState('3:40');
   const [liked, setLiked] = useState(false);
 
+  // These functions will be connected to Spotify API later
+  const handlePlayPause = () => {
+    setIsPlaying(!isPlaying);
+    // Will connect to Spotify play/pause API in the future
+    console.log("Play/Pause toggled");
+  };
+
+  const handleLike = () => {
+    setLiked(!liked);
+    // Will connect to Spotify liked tracks API in the future
+    console.log("Like toggled for track:", currentSong.id);
+  };
+
+  const handleSkipNext = () => {
+    // Simulate track change with mock data
+    if (queue.length > 0) {
+      // Move current song to end of queue
+      const updatedQueue = [...queue];
+      updatedQueue.push(currentSong);
+      
+      // Set first song in queue as current and remove it from queue
+      setCurrentSong(updatedQueue[0]);
+      setQueue(updatedQueue.slice(1));
+      
+      console.log("Skipped to next track");
+    }
+  };
+
+  const handleSkipPrevious = () => {
+    // This would connect to Spotify previous track API in the future
+    console.log("Skipped to previous track");
+  };
+
   // Render queue item
   const renderQueueItem = ({ item }: { item: Song }) => (
-    <TouchableOpacity style={styles.queueItem}>
+    <TouchableOpacity 
+      style={styles.queueItem}
+      onPress={() => {
+        // Move current song to queue
+        const updatedQueue = [...queue.filter(song => song.id !== item.id)];
+        updatedQueue.unshift(currentSong);
+        
+        // Set selected item as current song
+        setCurrentSong(item);
+        setQueue(updatedQueue);
+      }}
+    >
       <Image source={item.cover} style={styles.queueCover} />
       <View style={styles.queueTextContainer}>
         <Text style={styles.queueTitle}>{item.title}</Text>
@@ -62,8 +105,7 @@ export default function App() {
         {/* App Header */}
         <View style={styles.header}>
           <Text style={styles.appTitle}>
-            <Text style={{ color: '#FFFFF' }}>TuneSwipe</Text>
-
+            <Text style={{ color: '#FFFFFF' }}>TuneSwipe</Text>
           </Text>
         </View>
 
@@ -78,13 +120,16 @@ export default function App() {
             <Text style={styles.timeText}>{currentTime}</Text>
             
             <View style={styles.controlButtons}>
-              <TouchableOpacity style={styles.controlButton}>
+              <TouchableOpacity 
+                style={styles.controlButton}
+                onPress={handleSkipPrevious}
+              >
                 <Ionicons name="play-skip-back" size={24} color="#333" />
               </TouchableOpacity>
               
               <TouchableOpacity 
                 style={styles.playButton}
-                onPress={() => setIsPlaying(!isPlaying)}
+                onPress={handlePlayPause}
               >
                 <Ionicons 
                   name={isPlaying ? "pause" : "play"} 
@@ -93,7 +138,10 @@ export default function App() {
                 />
               </TouchableOpacity>
               
-              <TouchableOpacity style={styles.controlButton}>
+              <TouchableOpacity 
+                style={styles.controlButton}
+                onPress={handleSkipNext}
+              >
                 <Ionicons name="play-skip-forward" size={24} color="#333" />
               </TouchableOpacity>
             </View>
@@ -105,7 +153,7 @@ export default function App() {
           <View style={styles.reactionButtons}>
             <TouchableOpacity 
               style={styles.reactionButton}
-              onPress={() => setLiked(!liked)}
+              onPress={handleLike}
             >
               <Ionicons 
                 name={liked ? "heart" : "heart-outline"} 
@@ -114,7 +162,10 @@ export default function App() {
               />
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.reactionButton}>
+            <TouchableOpacity 
+              style={styles.reactionButton}
+              onPress={handleSkipNext}
+            >
               <Ionicons name="close-circle-outline" size={32} color="#333" />
             </TouchableOpacity>
           </View>
@@ -163,8 +214,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   albumCover: {
-    width: SCREEN_WIDTH * 0.3,
-    height: SCREEN_WIDTH * 0.3,
+    width: SCREEN_WIDTH * 0.6,
+    height: SCREEN_WIDTH * 0.6,
     borderRadius: 10,
     marginVertical: 10,
   },
@@ -173,6 +224,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 5,
     marginBottom: 15,
+    textAlign: 'center',
   },
   playerControls: {
     flexDirection: 'row',
@@ -274,4 +326,4 @@ const styles = StyleSheet.create({
     color: '#e91e63',
     fontWeight: '500',
   },
-  });
+});

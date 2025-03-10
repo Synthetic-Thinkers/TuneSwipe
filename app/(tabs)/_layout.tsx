@@ -30,6 +30,16 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
+        name = 'activity2'
+        options = {{
+          title: 'activity2',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'musical-notes' : 'musical-notes-outline'} color={color} size={24} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
         name='index'
         options={{
           title: 'Listen',
