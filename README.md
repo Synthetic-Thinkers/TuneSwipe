@@ -32,9 +32,10 @@ Through app features like a voting system to select the next song, artist, and/o
 
 <!-- BUILT WITH -->
 ### Built With
-To successfully build our project, we have used these listed frameworks/libraries.
+To successfully build our project, we have used these listed frameworks/libraries:
 
 * [![React][React.js]][React-url]
+* [![React Native][ReactNative.js]][ReactNative-url]
 
 
 <!-- GETTING STARTED -->
