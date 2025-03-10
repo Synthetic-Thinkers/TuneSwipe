@@ -1,4 +1,4 @@
-import { Text, View, StyleSheet, Pressable, ImageBackground, Button } from "react-native";
+import { Text, View, StyleSheet, Pressable, ImageBackground, Button, Image } from "react-native";
 import React, {useEffect, useState, useRef, useCallback} from "react";
 import * as Auth from 'expo-auth-session';
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -17,6 +17,7 @@ let successfulAuth = false;
 
 export default function login() {
 	const backgroundImage = require('../assets/images/TuneSwipe_Background.png');
+	const logo = require('../assets/images/TuneSwipe_Logo.png')
 	const router = useRouter();
 	const sheetRef = useRef<BottomSheet>(null);
 	const [isOpen, setIOpen] = useState(false);
@@ -24,12 +25,18 @@ export default function login() {
 		sheetRef.current?.snapToIndex(index);
 		setIOpen(true);
 	}, []);
-	const snapPoints = ["50%"];
+	const snapPoints = ["30%"];
+	
+	//const redirectUri = Auth.makeRedirectUri({useProxy: "TuneSwipe"});
+	//console.log("redirectUri = ", redirectUri)
+	const redirectUri = Auth.makeRedirectUri({scheme: "exp"});
+	console.log("redirectUri = ", redirectUri)
+
 
 	const [request, response, promptAsync] = Auth.useAuthRequest(
 	{
 		responseType: Auth.ResponseType.Token,
-		clientId: process.env.EXPO_PUBLIC_CLIENT_ID,
+		clientId: process.env.EXPO_PUBLIC_CLIENT_ID ?? " ",
       	scopes: [
         	"user-read-currently-playing",
         	"user-read-recently-played",
@@ -42,7 +49,11 @@ export default function login() {
         	"user-read-private",
       ],
       usePKCE: false,
-	  redirectUri: process.env.EXPO_PUBLIC_REDIRECT_URL,
+	  //redirectUri: process.env.EXPO_PUBLIC_REDIRECT_URL ?? " ",
+	  //redirectUri: Auth.makeRedirectUri({scheme: "TuneSwipe"}),
+	  //redirectUri
+	  //redirectUri: 'https://auth.expo.io/aortiz52/TuneSwipe',
+	  redirectUri: 'exp://127.0.0.1:19000/'
     },
 	discovery
 );
@@ -51,6 +62,7 @@ useEffect (() => {
 	if(response?.type == "success") {
 		const {access_token}= response.params;
 		console.log('accessToken = ', access_token);
+		//console.log('RedirectURI: ', redirectUri)
     	successfulAuth = true;
 		getUser(access_token);
     	router.replace("/(tabs)/library")
@@ -60,7 +72,7 @@ useEffect (() => {
 const getUser = async (token: string) => {
 	console.log("-- From getUser --");
 	try{
-		const resultFromCall = await fetch(process.env.EXPO_PUBLIC_USER_DOMAIN, {
+		const resultFromCall = await fetch(process.env.EXPO_PUBLIC_USER_DOMAIN ?? " ", {
 			method: "GET",
 			headers: { 
 				Authorization: `Bearer ${token}`,
@@ -111,7 +123,8 @@ const getUser = async (token: string) => {
 return (
 	<GestureHandlerRootView style ={{flex:1}}>
 		<ImageBackground source={backgroundImage} style = {styles.container}>
-			<Text style = {{height: 80}}>Login Screen</Text>
+			<Image source={logo} style={{ width:280, height: 100, resizeMode: 'contain'}}/>
+			<Text style = {{height: 80, fontSize: 20}}>Turn up the soundtrack of {'\n'}your life. Join the Beat Today</Text>
 
 			<View style={styles.button}>
 				<Button 
@@ -128,9 +141,9 @@ return (
 				index={-1}
 				onClose={() => setIOpen(false)}
 			>
-				<BottomSheetView>
+				<BottomSheetView style={styles.bottomSheetContainer	}>
 					<Text style={{fontSize: 25, height:35}}> Get Started</Text>
-					<Text style={{fontSize: 16, height:100}}> Login with Spofity and let the magic begin ... </Text>
+					<Text style={{fontSize: 16, height:35}}> Login with Spofity and let the magic begin ... </Text>
 				
 					<View style={styles.buttonSpotify}>
 						<Button 
@@ -164,8 +177,14 @@ const styles = StyleSheet.create({
 	buttonSpotify: {
 		borderRadius: 10,
 		backgroundColor: "black",
-		width: "50%",
+		width: "60%",
 		justifyContent: 'center',
 		alignItems: 'center',
-	}
+	},
+	bottomSheetContainer: {
+		flex: 1,
+		justifyContent: 'center',
+		alignItems: 'center',
+		paddingBottom: 80,
+	  }
 });
