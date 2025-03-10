@@ -1,13 +1,33 @@
-import React from 'react';
+import React, { useState, useEffect} from 'react';
 import { Text, View, StyleSheet, TouchableHighlight, Alert, Image, TouchableOpacity } from 'react-native';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-
+import { supabase } from '../../../supabase';
 
 
 export default function IndexScreen({ navigation }) {
+  const [userName, setUserName] = useState('');
+  useEffect(() => {
+    async function fetchUserName(userId) {
+
+      const { data, error } = await supabase
+        .from('User')
+        .select('userName')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error("Error fetch data", error);
+      } else {
+        setUserName(data.userName);
+        console.log("Fetched data: ", data.userName);
+      }
+    }
+    fetchUserName(4);
+  }, []);
+
   const onPressStart = () => navigation.navigate("Options");
 
   const [fontsLoaded] = useFonts({
@@ -37,6 +57,7 @@ export default function IndexScreen({ navigation }) {
     Alert.alert('You selected Instructions!');
   };
 
+
   return (
     <TouchableOpacity style={styles.container} onPress={onPressStart} activeOpacity={1}>
       <View style={styles.container}>
@@ -47,7 +68,8 @@ export default function IndexScreen({ navigation }) {
             {/* Contains a 'Welcome' text with the User's name */}
             <View style={styles.userGreeting}>
               <Text style={styles.text}>Welcome,</Text>
-              <Text style={styles.usersName}>User</Text>
+              {/* <Text style={styles.usersName}>User</Text> */}
+              <Text style={styles.usersName}>{userName || 'User'}</Text>
             </View>
             {/* Contains a gradient outline around the user's profile picture */}
             <View style={styles.profileContainer}>

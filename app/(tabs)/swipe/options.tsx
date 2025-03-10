@@ -1,11 +1,32 @@
-import React from 'react';
+import React, { useState, useEffect} from 'react';
 import { Text, View, StyleSheet, TouchableHighlight, Image } from 'react-native';
 import { useFonts, Inter_400Regular, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { supabase } from '../../../supabase';
 
 
 export default function OptionsScreen({ navigation }) {
+  const [userName, setUserName] = useState('');
+    useEffect(() => {
+      async function fetchUserName(userId) {
+
+        const { data, error } = await supabase
+          .from('User')
+          .select('userName')
+          .eq('id', userId)
+          .single();
+
+        if (error) {
+          console.error("Error fetch data", error);
+        } else {
+          setUserName(data.userName);
+          console.log("Fetched data: ", data.userName);
+        }
+      }
+      fetchUserName(4);
+    }, []);
+
   const [fontsLoaded] = useFonts({
     Inter_400Regular, // Regular Weight
     Inter_600SemiBold, // Extra Bold Weight
@@ -43,8 +64,9 @@ export default function OptionsScreen({ navigation }) {
         <View style={styles.rowContainer}>
           {/* Contains a 'Welcome' text with the User's name */}
           <View style={styles.userGreeting}>
-            <Text style={styles.text}>Welcome,</Text>
-            <Text style={styles.usersName}>User</Text>
+             <Text style={styles.text}>Welcome,</Text>
+            {/* <Text style={styles.usersName}>User</Text> */}
+             <Text style={styles.usersName}>{userName || 'User'}</Text>
           </View>
           {/* Contains a gradient outline around the user's profile picture */}
           <View style={styles.profileContainer}>
