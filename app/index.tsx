@@ -54,7 +54,7 @@ useEffect (() => {
 		console.log('accessToken = ', access_token);
     	successfulAuth = true;
 		getUser(access_token);
-    	//router.replace("/(tabs)/library")
+    	router.replace("/(tabs)/library")
 	}
 }, [response]);
 
