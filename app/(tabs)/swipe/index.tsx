@@ -8,27 +8,32 @@ import { supabase } from '../../../supabase';
 
 
 export default function IndexScreen({ navigation }) {
-  const [userName, setUserName] = useState('');
+  const [userId, setUserId] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
   useEffect(() => {
-    async function fetchUserName(userId) {
+    async function fetchUser(userId) {
 
       const { data, error } = await supabase
-        .from('User')
-        .select('userName')
+        .from('Test')
+        .select('username')
         .eq('id', userId)
         .single();
 
       if (error) {
         console.error("Error fetch data", error);
       } else {
-        setUserName(data.userName);
-        console.log("Fetched data: ", data.userName);
+        setUsername(data.username);
+        setUserId(userId);
+        console.log("Fetched data: ", data.username);
       }
     }
-    fetchUserName(4);
+    fetchUser(1);
   }, []);
 
-  const onPressStart = () => navigation.navigate("Options");
+  const onPressStart = () => navigation.replace("Options", {
+    userId: userId,
+    username: username,
+  });
 
   const [fontsLoaded] = useFonts({
     Inter_400Regular, // Regular Weight
@@ -69,7 +74,7 @@ export default function IndexScreen({ navigation }) {
             <View style={styles.userGreeting}>
               <Text style={styles.text}>Welcome,</Text>
               {/* <Text style={styles.usersName}>User</Text> */}
-              <Text style={styles.usersName}>{userName || 'User'}</Text>
+              <Text style={styles.usersName}>{username || 'User'}</Text>
             </View>
             {/* Contains a gradient outline around the user's profile picture */}
             <View style={styles.profileContainer}>
@@ -212,27 +217,29 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   userContainer: {
-    width: 392,
+    width: 385,
     height: 130,
     alignContent: 'center',
     justifyContent: 'center',
   },
   userGreeting: {
-    width: 98,
-    height: 50,
-    paddingLeft: 24,
+    // width: 98,
+    // height: 50,
     alignContent: 'center',
+    flexWrap: 'nowrap',
   },
   usersName: {
-    color: '#00000',
+    color: 'black',
     fontFamily: 'Inter_600SemiBold',
     fontSize: 24,
+    flexWrap: 'nowrap',
   },
   profileContainer: {
     width: 75,
     height: 75,
     borderRadius: 75 / 2,
-    marginLeft: 220,
+    marginLeft: 310,
+    position: 'fixed',
   },
   gradient: {
     width: 75,

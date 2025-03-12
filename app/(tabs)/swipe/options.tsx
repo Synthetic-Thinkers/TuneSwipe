@@ -1,31 +1,105 @@
-import React, { useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRoute } from '@react-navigation/native';
 import { Text, View, StyleSheet, TouchableHighlight, Image } from 'react-native';
 import { useFonts, Inter_400Regular, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../../supabase';
 
+type ActivityLog = {
+  id: string;
+  mode: string;
+  playlistId: string;
+  swipeResults: Array<{
+    id: string;
+    liked: boolean;
+  }>;
+  timestamp: string;
+};
+
+type RouteParams = {
+  userId: string;
+  username: string;
+  activityLog: ActivityLog;
+};
 
 export default function OptionsScreen({ navigation }) {
-  const [userName, setUserName] = useState('');
-    useEffect(() => {
-      async function fetchUserName(userId) {
+  const route = useRoute();
 
-        const { data, error } = await supabase
-          .from('User')
-          .select('userName')
-          .eq('id', userId)
-          .single();
+  const { userId, username } = route.params as RouteParams;
 
-        if (error) {
-          console.error("Error fetch data", error);
-        } else {
-          setUserName(data.userName);
-          console.log("Fetched data: ", data.userName);
-        }
+  const [selectedMode, setSelectedMode] = useState<string | null>(null);
+
+  const handleSelection = async (mode: string) => {
+    setSelectedMode(mode);
+
+    const getNextId = async () => {
+      const { data, error } = await supabase
+        .from("Test")
+        .select("activityLog")
+        .eq("id", userId)
+        .limit(1);
+
+      if (error) {
+        console.error("Error fetching latest ID:", error.message);
+        return 1; // Return 1 if error occurs
       }
-      fetchUserName(4);
-    }, []);
+
+      if (!data || data.length === 0 || !data[0].activityLog) {
+        console.log("No records found, starting with ID: 1");
+        return 1; // No records exist, start with ID 1
+      }
+
+      const lastId = data[0].activityLog.length;
+      console.log("Last ID found:", lastId); // Log the last ID
+
+      return lastId + 1;
+    };
+
+    const { data, error } = await supabase
+      .from("Test")
+      .select("activityLog")
+      .eq("id", userId)
+      .single();
+
+    if (error) {
+     console.error("Error fetching user:", error.message);
+    } else {
+     console.log("Fetched activity log:", data.activityLog);
+    }
+
+    const existingLogs = data?.activityLog || [];
+    const nextId = await getNextId();
+
+    console.log("Next ID:", nextId);
+
+    const newLogEntry = {
+      _id: nextId,
+      mode: mode,
+      swipeResults: [],
+      playlistId: null,
+      completedAt: null,
+    };
+
+    const updatedLogs = [...existingLogs, newLogEntry];
+
+    const { error: updatedError } = await supabase
+      .from("Test")
+      .update({ activityLog: updatedLogs })
+      .eq("id", userId)
+
+    if (updatedError) {
+      console.error("Error updating activity log:", updatedError.message);
+    } else {
+      console.log("Mode selection saved:", mode);
+      navigation.navigate("Loading", {
+        userId: userId,
+        mode: mode,
+        activityLog: newLogEntry,
+      });
+    }
+  };
+
 
   const [fontsLoaded] = useFonts({
     Inter_400Regular, // Regular Weight
@@ -34,21 +108,28 @@ export default function OptionsScreen({ navigation }) {
 
   if (!fontsLoaded) {
     // Show loading text until fonts are loaded
-    return <Text>Loading...</Text>;
+    return (
+      <View style={styles.container}>
+        <Text>Loading...</Text>
+      </View>
+    )
   }
 
   const onPressSongs = () => {
-    navigation.navigate("Loading");
+    handleSelection("songs");
+    // navigation.navigate("Loading");
     console.log('You selected Songs!');
   };
 
   const onPressArtists = () => {
-    navigation.navigate("Loading");
+    handleSelection("artists");
+    // navigation.navigate("Loading");
     console.log('You selected Artists!');
   };
 
   const onPressGenres = () => {
-    navigation.navigate("Loading");
+    handleSelection("genres");
+    // navigation.navigate("Loading");
     console.log('You selected Genres!');
   };
 
@@ -66,7 +147,7 @@ export default function OptionsScreen({ navigation }) {
           <View style={styles.userGreeting}>
              <Text style={styles.text}>Welcome,</Text>
             {/* <Text style={styles.usersName}>User</Text> */}
-             <Text style={styles.usersName}>{userName || 'User'}</Text>
+             <Text style={styles.usersName}>{username || 'User'}</Text>
           </View>
           {/* Contains a gradient outline around the user's profile picture */}
           <View style={styles.profileContainer}>
@@ -156,12 +237,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   text: {
-    color: '#00000',
+    color: 'black',
     fontFamily: 'Inter_400Regular',
     fontSize: 16,
   },
   selectText: {
-    color: '#00000',
+    color: 'black',
     fontFamily: 'Inter_400Regular',
     fontSize: 16,
     marginLeft: 12,
@@ -176,27 +257,29 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   userContainer: {
-    width: 392,
+    width: 385,
     height: 130,
     alignContent: 'center',
     justifyContent: 'center',
   },
   userGreeting: {
-    width: 98,
-    height: 50,
-    paddingLeft: 24,
+    // width: 98,
+    // height: 50,
     alignContent: 'center',
+    flexWrap: 'nowrap',
   },
   usersName: {
-    color: '#00000',
+    color: 'black',
     fontFamily: 'Inter_600SemiBold',
     fontSize: 24,
+    flexWrap: 'nowrap',
   },
   profileContainer: {
     width: 75,
     height: 75,
     borderRadius: 75 / 2,
-    marginLeft: 220,
+    marginLeft: 310,
+    position: 'fixed',
   },
   gradient: {
     width: 75,
@@ -227,13 +310,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   buttonText: {
-    color: '#00000',
+    color: 'black',
     fontFamily: 'Inter_400Regular',
     fontSize: 16,
     marginLeft: 58,
   },
   artistsText: {
-    color: '#00000',
+    color: 'black',
     fontFamily: 'Inter_400Regular',
     fontSize: 16,
     marginLeft: 273,

@@ -1,14 +1,37 @@
 import React, { useEffect } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 import { useFonts, Inter_800ExtraBold } from "@expo-google-fonts/inter";
-import { useNavigation } from "expo-router";
+import { useRoute } from '@react-navigation/native';
+
+type ActivityLog = {
+  id: string;
+  mode: string;
+  playlistId: string;
+  swipeResults: Array<{
+    id: string;
+    liked: boolean;
+  }>;
+  timestamp: string;
+};
+
+type RouteParams = {
+  userId: string;
+  mode: string;
+  activityLog: ActivityLog;
+};
 
 export default function LoadingScreen({ navigation }) {
+  const route = useRoute();
+
+  const { userId, mode, activityLog } = route.params as RouteParams;
 
   useEffect(() => {
-    // Simulate loading (e.g., checking backend or async storage)
     setTimeout(() => {
-      navigation.replace("Swipe"); // Replace ensures user can't go back to loading screen
+      navigation.replace("Swipe", {
+        userId: userId,
+        mode: mode,
+        activityLog: activityLog,
+      });
     }, 3000); // Simulate 3-second loading time
   }, []);
 
