@@ -3,6 +3,7 @@ import { Colors } from 'react-native/Libraries/NewAppScreen';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, Feather, FontAwesome } from "@expo/vector-icons";
 import React, { useState } from 'react';
+//import supabase from "../utils/supabaseClient.js";  // Adjust the path as needed
 
 // Types
 interface Song {
@@ -14,7 +15,7 @@ interface Song {
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
-export default function PlayerScreen() {
+export default function ActivityScreen() {
   // Current playing song state
   const [currentSong, setCurrentSong] = useState({
     id: '1',
