@@ -58,7 +58,6 @@ export default function PlaylistScreen() {
   
       // Step 2: Extract song IDs from the playlist data
       const songIds = playlistData.songs; // Assuming `songs` is an array of song IDs
-      console.log(songIds)
       if (songIds && songIds.length > 0) {
         // Step 3: Fetch the song data using the song IDs
         const { data: songsData, error: songsError } = await supabase

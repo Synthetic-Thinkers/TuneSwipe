@@ -3,10 +3,12 @@ import { Text, View, StyleSheet, Image, ScrollView } from "react-native";
 import ArtistIcon from "@/components/profileScreen/ArtistIcon";
 import { SearchBar } from "@rneui/themed";
 
-export default function likedSongScreen() {
+export default function likedArtists() {
   return (
     <ScrollView>
-
+        <View>
+            <Text>Liked Artists</Text>
+        </View>
     </ScrollView>
   );
 }

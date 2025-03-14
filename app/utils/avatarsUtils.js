@@ -6,7 +6,7 @@ import {
   ImageManipulator,
 } from "expo-image-manipulator";
 
-export const convertImageToPNG = async (imageUri: any) => {
+export const convertImageToPNG = async (imageUri) => {
   try {
     const context = ImageManipulator.manipulate(imageUri);
     const image = await context.renderAsync();
@@ -74,3 +74,12 @@ export const uploadAvatar = async (userId, file) => {
   }
 };
 
+const avatarUtils = {
+  convertImageToPNG,
+  fetchAvatarUrl,
+  storeAvatarUrl,
+  getStoredAvatarUrl,
+  uploadAvatar,
+};
+
+export default avatarUtils;

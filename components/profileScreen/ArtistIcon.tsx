@@ -8,14 +8,14 @@ import {
 } from "react-native";
 import AntDesign from "@expo/vector-icons/AntDesign";
 
-const ArtistIcon = ({ name }: {name: string}) => {
+const ArtistIcon = ({ data }: {data: any}) => {
   return (
     <View>
       <Image
-        source={require("../../assets/images/michaelScott.jpg")}
+        source={{uri: data.imageUrl}}
         style={styles.artistImage}
       />
-      <Text style={styles.artistName}>{name}</Text>
+      <Text style={styles.artistName}>{data.name}</Text>
     </View>
   );
 };
