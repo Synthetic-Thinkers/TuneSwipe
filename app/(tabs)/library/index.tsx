@@ -41,21 +41,23 @@ export default function LibraryScreen() {
     });
   };
 
-  const renderItem = ({ item }: { item: any }) => (
+  const renderItem = (playlist:any) => (
     <TouchableHighlight
-      onPress={() => onPress(item)} // Pass the item to onPress
+      onPress={() => onPress(playlist)} // Pass the playlist to onPress
       underlayColor="#70A7FF"
+      key={playlist.id}
+      style={styles.playlistCard}
     >
-      <View style={styles.playlistContainer}>
+      <View>
         <Image
           style={styles.playlistImage}
           source={{
-            uri: item.image
-              ? item.image
+            uri: playlist.image
+              ? playlist.image
               : "https://i.pinimg.com/736x/25/98/2c/25982c2af2cca84c831a37dedfd15c66.jpg",
           }}
         />
-        <Text style={styles.playlistTitle}>{item.name}</Text>
+        <Text style={styles.playlistTitle}>{playlist.name}</Text>
       </View>
     </TouchableHighlight>
   );
@@ -94,15 +96,14 @@ export default function LibraryScreen() {
           </TouchableHighlight>
         </View>
 
-        <View>
-          <FlatList
-            data={playlists}
-            renderItem={renderItem}
-            keyExtractor={(item, index) => index.toString()}
-            numColumns={3}
-            showsHorizontalScrollIndicator={false}
-            columnWrapperStyle={styles.row}
-          />
+        <View style={styles.playlistContainer}>
+          {
+            playlists.map(playlist => {
+              const playlistIcon = renderItem(playlist);
+              return playlistIcon;
+            })
+          }
+
         </View>
       </View>
     </ScrollView>
@@ -115,22 +116,27 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   libraryContainer: {
-    padding: 16,
-  },
-  playlistImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
+    padding: 10,
   },
   playlistContainer: {
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
+    justifyContent: "space-evenly",
+  },
+  playlistImage: {
+    width: 90,
+    height: 90,
+    borderRadius: 8,
+  },
+  playlistCard: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    justifyContent: "center",
     margin: 5,
     padding: 8,
     maxWidth: 100,
     minWidth: 100,
+    borderRadius: 8, // Optional: Add rounded corners
   },
   playlistTitle: {
     fontSize: 16,
