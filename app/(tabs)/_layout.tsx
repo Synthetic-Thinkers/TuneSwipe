@@ -10,20 +10,20 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
-        name='index'
-        options={{
-          title: 'Listen',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'musical-notes' : 'musical-notes-outline'} color={color} size={24} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name='swipe'
         options={{
           title: 'Swipe',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'swap-horizontal' : 'swap-horizontal-outline'} color={color} size={24}/>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name='index'
+        options={{
+          title: 'Listen',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'musical-notes' : 'musical-notes-outline'} color={color} size={24} />
           ),
         }}
       />

@@ -63,7 +63,7 @@ const getUser = async (token: string) => {
 	try{
 		const resultFromCall = await fetch(process.env.EXPO_PUBLIC_USER_DOMAIN ?? " ", {
 			method: "GET",
-			headers: { 
+			headers: {
 				Authorization: `Bearer ${token}`,
 				"Content-Type": "application/json",
 			},
@@ -83,10 +83,10 @@ const getUser = async (token: string) => {
 			.select('*')
 			.eq('spotifyID', spotifyID)
 			.single();
-		
+
 		if (User) {
 			console.log("User already exists in Supabase.");
-		} 
+		}
 		else {
 			// Insert new user
 			const { data, error: insertError } = await supabase
@@ -95,15 +95,17 @@ const getUser = async (token: string) => {
     				{ spotifyID: spotifyID},
   				])
   				.select()
-			
+
 			if (insertError) {
 				console.error("ERROR - Could not insert user:", insertError.message);
 			}
 			else {
 				console.log("New user added to Supabase!");
 			}
-		}
-		
+    }
+    // Store the spotifyID in AsyncStorage
+    await AsyncStorage.setItem("spotifyID", spotifyID);
+
 	} catch (error) {
 		console.error("ERROR - Could not get user.")
 	}
@@ -116,10 +118,10 @@ return (
 			<Text style = {{height: 80, fontSize: 20}}>Turn up the soundtrack of {'\n'}your life. Join the Beat Today</Text>
 
 			<View style={styles.button}>
-				<Button 
-					title="Start Now" 
+				<Button
+					title="Start Now"
 					color= "white"
-					onPress={() => handleSanpPress(0)} 
+					onPress={() => handleSanpPress(0)}
 				/>
 			</View>
 
@@ -133,17 +135,17 @@ return (
 				<BottomSheetView style={styles.bottomSheetContainer	}>
 					<Text style={{fontSize: 25, height:35}}> Get Started</Text>
 					<Text style={{fontSize: 16, height:35}}> Login with Spofity and let the magic begin ... </Text>
-				
+
 					<View style={styles.buttonSpotify}>
-						<Button 
-							title= "Sign in with Spotify" 
+						<Button
+							title= "Sign in with Spotify"
 							color= "white"
-							onPress={() => promptAsync()} 
-						/> 
+							onPress={() => promptAsync()}
+						/>
 					</View>
 				</BottomSheetView>
 			</BottomSheet>
-		</ImageBackground>	
+		</ImageBackground>
 	</GestureHandlerRootView>
 );
 }
