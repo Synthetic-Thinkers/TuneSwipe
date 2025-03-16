@@ -15,7 +15,7 @@ export default function IndexScreen({ navigation }) {
   useEffect(() => {
   async function fetchUser() {
     try {
-      const storedID = await AsyncStorage.getItem("spotifyId");
+      const storedID = await AsyncStorage.getItem("spotifyID");
       if (storedID) {
         setSpotifyID(storedID);
         console.log("Retrieved Spotify ID:", storedID);
@@ -237,32 +237,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-start',
-    marginBottom: 10,
   },
   userContainer: {
     width: 385,
     height: 130,
     alignContent: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
   },
   userGreeting: {
-    // width: 98,
-    // height: 50,
-    alignContent: 'center',
     flexWrap: 'nowrap',
+    flex: 1,
   },
   usersName: {
     color: 'black',
     fontFamily: 'Inter_600SemiBold',
     fontSize: 24,
-    flexWrap: 'nowrap',
+    flexShrink: 1,
+    overflow: 'hidden',
   },
   profileContainer: {
     width: 75,
     height: 75,
     borderRadius: 75 / 2,
-    marginLeft: 310,
-    position: 'fixed',
+    marginLeft: 10,
   },
   gradient: {
     width: 75,

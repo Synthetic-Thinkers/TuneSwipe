@@ -27,7 +27,7 @@ export default function LoadingScreen({ navigation }) {
 
   useEffect(() => {
     setTimeout(() => {
-    }, 3000); // Simulate 3-second loading time
+    }, 3000); // 3-second loading time
   }, []);
 
   const [fontsLoaded] = useFonts({
