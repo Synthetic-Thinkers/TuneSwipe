@@ -1,16 +1,31 @@
 import { MaterialIcons } from "@expo/vector-icons";
-import { Text, View, StyleSheet, Image, ScrollView, TouchableOpacity } from "react-native";
+import {
+  Text,
+  View,
+  StyleSheet,
+  Image,
+  ScrollView,
+  TouchableOpacity,
+} from "react-native";
 import { useEffect, useState } from "react";
-import supabase from "../../utils/supabaseClient";
 import ArtistIcon from "@/components/profileScreen/ArtistIcon";
-import { fetchAvatarUrl, getStoredAvatarUrl, storeAvatarUrl, uploadAvatar } from "../../utils/avatarsUtils"// Import the utility functions
-import Feather from '@expo/vector-icons/Feather';
-import { Menu, MenuOptions, MenuOption, MenuTrigger } from 'react-native-popup-menu';
-import * as ImagePicker from 'expo-image-picker';
-
+import {
+  fetchAvatarUrl,
+  getStoredAvatarUrl,
+  storeAvatarUrl,
+  uploadAvatar,
+  convertImageToPNG,
+} from "../../utils/avatarsUtils"; // Import the utility functions
+import Feather from "@expo/vector-icons/Feather";
+import {
+  Menu,
+  MenuOptions,
+  MenuOption,
+  MenuTrigger,
+} from "react-native-popup-menu";
+import * as ImagePicker from "expo-image-picker";
 
 export default function ProfileScreen() {
-
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPressed, setIsPressed] = useState(false);
@@ -29,46 +44,49 @@ export default function ProfileScreen() {
     };
 
     loadAvatar();
-
   }, []);
 
   const pickImage = async () => {
     try {
       // No permissions request is necessary for launching the image library
       let result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images', 'videos'],
+        mediaTypes: ["images", "videos"],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 1,
       });
       if (!result.canceled) {
-        const data = await uploadAvatar(userId, result.assets[0].uri);
-        if(data){
+        // Ensure all images are stored as png
+        const png = await convertImageToPNG(result.assets[0].uri);
+        const pngBase64 = png!.base64;
+        const data = await uploadAvatar(userId, pngBase64);
+        if (data) {
           const url = await fetchAvatarUrl(userId);
           setAvatarUrl(url);
-
         }
       }
     } catch (error) {
       console.error("Error picking or uploading image: ", error);
       // You can also display an error message to the user if needed
     }
-
   };
   if (loading) {
-    return <View><Text>Loading...</Text></View>;
+    return (
+      <View>
+        <Text>Loading...</Text>
+      </View>
+    );
   }
 
   return (
     <ScrollView>
       <View>
-
         <View style={styles.profileInfoContainer}>
           <TouchableOpacity onPress={() => setIsPressed(!isPressed)}>
             <View style={styles.imageContainer}>
               <Image
                 style={styles.profileImage}
-                source={{ uri: avatarUrl ?? '' }}
+                source={{ uri: avatarUrl ?? "" }}
               />
               {isPressed && (
                 <View style={styles.iconOverlay}>
@@ -77,16 +95,18 @@ export default function ProfileScreen() {
                       <Feather name="edit-2" size={50} color="white" />
                     </MenuTrigger>
                     <MenuOptions>
-                      <MenuOption onSelect={() => alert('Change Background')} >
-                        <Text style={{ color: 'black' }}>Change Background</Text>
+                      <MenuOption onSelect={() => alert("Change Background")}>
+                        <Text style={{ color: "black" }}>
+                          Change Background
+                        </Text>
                       </MenuOption>
-                      <MenuOption onSelect={() => pickImage()} >
-                        <Text style={{ color: 'black' }}>Change Profile Picture</Text>
+                      <MenuOption onSelect={() => pickImage()}>
+                        <Text style={{ color: "black" }}>
+                          Change Profile Picture
+                        </Text>
                       </MenuOption>
-
                     </MenuOptions>
                   </Menu>
-
                 </View>
               )}
             </View>
@@ -106,7 +126,6 @@ export default function ProfileScreen() {
           <ArtistIcon name="Artist Name" />
           <ArtistIcon name="Artist Name" />
           <ArtistIcon name="Artist Name" />
-
         </View>
         <View style={styles.rowContainer}>
           <Text style={styles.header2}>Disliked Artists</Text>
@@ -183,7 +202,7 @@ const styles = StyleSheet.create({
   profileImage: {
     width: 200,
     height: 200,
-    borderRadius: 50,
+    borderRadius: 100,
   },
   artistImage: {
     width: 100,
@@ -195,7 +214,7 @@ const styles = StyleSheet.create({
     fontWeight: 600,
   },
   imageContainer: {
-    position: 'relative',
+    position: "relative",
   },
   image: {
     width: 150,
@@ -203,14 +222,13 @@ const styles = StyleSheet.create({
     borderRadius: 75,
   },
   iconOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderRadius: 75,
   },
-
 });
