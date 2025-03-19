@@ -26,7 +26,7 @@ export default function login() {
 		setIOpen(true);
 	}, []);
 	const snapPoints = ["30%"];
-
+	console.log(process.env.EXPO_PUBLIC_REDIRECT_URL)
 	const [request, response, promptAsync] = Auth.useAuthRequest(
 	{
 		responseType: Auth.ResponseType.Token,

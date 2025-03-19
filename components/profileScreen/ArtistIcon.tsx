@@ -10,17 +10,20 @@ import AntDesign from "@expo/vector-icons/AntDesign";
 
 const ArtistIcon = ({ data }: {data: any}) => {
   return (
-    <View>
+    <View style={styles.container}>
       <Image
         source={{uri: data.imageUrl}}
         style={styles.artistImage}
       />
-      <Text style={styles.artistName}>{data.name}</Text>
+      <Text numberOfLines={1} ellipsizeMode='head' style={styles.artistName}>{data.name}</Text>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container:{
+    maxWidth:100
+  },
   artistImage: {
     width: 80,
     height: 80,
