@@ -1,5 +1,5 @@
 import React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import {
   Text,
   View,
@@ -61,6 +61,7 @@ export default function LibraryScreen() {
   );
 
   return (
+    
     <ScrollView>
       <View style={styles.libraryContainer}>
         <View style={styles.headerContainer}>

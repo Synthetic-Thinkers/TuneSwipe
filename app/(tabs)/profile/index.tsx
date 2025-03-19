@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   Pressable,
 } from "react-native";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext, createContext } from "react";
 import ArtistIcon from "@/components/profileScreen/ArtistIcon";
 import {
   fetchAvatarUrl,
@@ -194,7 +194,15 @@ export default function ProfileScreen() {
         <View style={styles.rowContainer}>
           <Text style={styles.header2}>Liked Artists</Text>
           <Pressable>
-            <Link href={{ pathname: "/profile/likedArtists" }}>
+            <Link
+              href={{
+                pathname: "/profile/likedArtists",
+                params: {
+                  artistData: JSON.stringify(artistData),
+                  user: JSON.stringify(user),
+                },
+              }}
+            >
               <MaterialIcons
                 name="keyboard-arrow-right"
                 style={styles.icon}
@@ -217,7 +225,15 @@ export default function ProfileScreen() {
         <View style={styles.rowContainer}>
           <Text style={styles.header2}>Disliked Artists</Text>
           <Pressable>
-            <Link href={{ pathname: "/profile/dislikedArtists" }}>
+            <Link
+              href={{
+                pathname: "/profile/dislikedArtists",
+                params: {
+                  artistData: JSON.stringify(artistData),
+                  user: JSON.stringify(user),
+                },
+              }}
+            >
               <MaterialIcons
                 name="keyboard-arrow-right"
                 style={styles.icon}

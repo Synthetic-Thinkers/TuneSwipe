@@ -8,14 +8,23 @@ import Feather from "@expo/vector-icons/Feather";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import { useState } from "react";
 import { Pressable } from "react-native";
+import { useLocalSearchParams } from "expo-router";
 
 export default function likedArtists() {
   const [search, setSearch] = useState("");
+  const { user:userString, artistData:artistDataString } = useLocalSearchParams() as { user: string, artistData: string };
+
+  const user = JSON.parse(Array.isArray(userString) ? userString[0] : userString) as { likedArtists: number[] };
+  const artistData = JSON.parse(
+    Array.isArray(artistDataString) ? artistDataString[0] : artistDataString
+  );
 
   const updateSearch = (search: string) => {
     setSearch(search);
   };
 
+  console.log(user);
+  console.log(artistData);
   return (
     <ScrollView>
       <View style={styles.screenContainer}>
@@ -32,25 +41,39 @@ export default function likedArtists() {
           </View>
         </View>
         <SearchBar
-            placeholder="Type Here..."
-            onChangeText={updateSearch}
-            value={search}
-            containerStyle={{ flex: 1, borderRadius: 15 }}
-          />
+          placeholder="Type Here..."
+          onChangeText={updateSearch}
+          value={search}
+          containerStyle={{ flex: 1, borderRadius: 15 }}
+        />
+        <View style={styles.songContainer}>
+          {user.likedArtists.map((artistID: number) => (
+            <ArtistIcon
+              data={artistData.find((artist) => artist.id === artistID)}
+              key={artistID}
+            />
+          ))}
+        </View>
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  songContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-around",
+    padding: 20
+  },
   flexRow: {
     display: "flex",
     flexDirection: "row",
     gap: 10,
     alignItems: "center",
   },
-  screenContainer:{
-    padding: 8
+  screenContainer: {
+    padding: 8,
   },
   headerContainer: {
     display: "flex",

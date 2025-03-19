@@ -22,7 +22,8 @@ const ArtistIcon = ({ data }: {data: any}) => {
 
 const styles = StyleSheet.create({
   container:{
-    maxWidth:100
+    maxWidth:100,
+    minWidth:100,
   },
   artistImage: {
     width: 80,
