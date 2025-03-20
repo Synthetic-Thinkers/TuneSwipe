@@ -80,43 +80,6 @@ export default function ProfileScreen() {
     fetchData();
   }, []);
 
-  // //Fetch user profile and liked/disliked artists
-  // useEffect(() => {
-  //   async function fetchData() {
-  //     try {
-  //       const { data: userData, error: userError } = await supabase
-  //         .from("User")
-  //         .select("*")
-  //         .eq("id", userId)
-  //         .single();
-  //       if (userError) {
-  //         throw userError;
-  //       } else {
-  //         setUser(userData);
-  //         console.log(userData)
-  //       }
-  //       //Fetch artist data using the IDs from the user data
-  //       const artistIds = [
-  //         ...userData.likedArtists,
-  //         ...userData.dislikedArtists,
-  //       ];
-  //       const { data: artistData, error: songError } = await supabase
-  //         .from("Artist")
-  //         .select("*")
-  //         .in("id", artistIds);
-  //       if (songError) {
-  //         throw songError;
-  //       } else {
-  //         setArtistData(artistData);
-  //       }
-  //     } catch (error) {
-  //       console.error("Error fetching data:", error);
-  //     }
-  //   }
-  //   fetchData();
-  //   setLoading(false);
-  // }, []);
-
   const pickImage = async () => {
     try {
       // No permissions request is necessary for launching the image library
@@ -218,6 +181,7 @@ export default function ProfileScreen() {
               <ArtistIcon
                 data={artistData.find((artist) => artist.id === artistID)}
                 key={artistID}
+
               />
             ))}
           </ScrollView>
@@ -249,27 +213,52 @@ export default function ProfileScreen() {
               <ArtistIcon
                 data={artistData.find((artist) => artist.id === artistID)}
                 key={artistID}
+  
               />
             ))}
           </ScrollView>
         </View>
         <View style={styles.rowContainer}>
           <Text style={styles.header2}>Liked Songs</Text>
-          <MaterialIcons
-            name="keyboard-arrow-right"
-            style={styles.icon}
-            size={48}
-            color="#C4C4C4"
-          />
+          <Pressable>
+            <Link
+              href={{
+                pathname: "/profile/likedSongs",
+                params: {
+                  artistData: JSON.stringify(artistData),
+                  user: JSON.stringify(user),
+                },
+              }}
+            >
+              <MaterialIcons
+                name="keyboard-arrow-right"
+                style={styles.icon}
+                size={48}
+                color="#C4C4C4"
+              />
+            </Link>
+          </Pressable>
         </View>
         <View style={styles.rowContainer}>
           <Text style={styles.header2}>Disliked Songs</Text>
-          <MaterialIcons
-            name="keyboard-arrow-right"
-            style={styles.icon}
-            size={48}
-            color="#C4C4C4"
-          />
+          <Pressable>
+            <Link
+              href={{
+                pathname: "/profile/dislikedSongs",
+                params: {
+                  artistData: JSON.stringify(artistData),
+                  user: JSON.stringify(user),
+                },
+              }}
+            >
+              <MaterialIcons
+                name="keyboard-arrow-right"
+                style={styles.icon}
+                size={48}
+                color="#C4C4C4"
+              />
+            </Link>
+          </Pressable>
         </View>
         <View style={styles.rowContainer}>
           <Text style={styles.header2}>Settings</Text>

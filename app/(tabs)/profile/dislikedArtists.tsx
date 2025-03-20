@@ -1,27 +1,43 @@
-import { MaterialIcons } from "@expo/vector-icons";
 import { Text, View, StyleSheet, Image, ScrollView } from "react-native";
 import ArtistIcon from "@/components/profileScreen/ArtistIcon";
 import { SearchBar } from "@rneui/themed";
 import { Link } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import Feather from "@expo/vector-icons/Feather";
-import AntDesign from "@expo/vector-icons/AntDesign";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Pressable } from "react-native";
 import { useLocalSearchParams } from "expo-router";
+import supabase from "../../utils/supabaseClient";
 
+type Artist = {
+  id: number;
+  name: string;
+};
 export default function dislikedArtists() {
-  const [search, setSearch] = useState("");
-
   const { user: userString, artistData: artistDataString } =
     useLocalSearchParams() as { user: string; artistData: string };
 
-  const user = JSON.parse(
-    Array.isArray(userString) ? userString[0] : userString
-  ) as { likedArtists: number[] };
-  const artistData = JSON.parse(
-    Array.isArray(artistDataString) ? artistDataString[0] : artistDataString
-  );
+  const [search, setSearch] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [user, setUser] = useState(JSON.parse(userString));
+  const [artistData, setArtistData] = useState(JSON.parse(artistDataString));
+
+  const deleteDislikedArtist = async (id: number) => {
+    const updatedDislikedArtists = user.dislikedArtists.filter(
+      (artistID: number) => artistID !== id
+    );
+    console.log(updatedDislikedArtists);
+    const { error } = await supabase
+      .from("User")
+      .update({ dislikedArtists: updatedDislikedArtists })
+      .eq("id", user?.id);
+
+    if (error) {
+      console.error("Error deleting artist:", error);
+    } else {
+      console.log("Artist deleted successfully");
+      setUser({ ...user, dislikedArtists: updatedDislikedArtists });
+    }
+  };
 
   const updateSearch = (search: string) => {
     setSearch(search);
@@ -40,8 +56,10 @@ export default function dislikedArtists() {
             <Text>Disliked Artists</Text>
           </View>
           <View style={styles.flexRow}>
-            <Text>Edit</Text>
-            <Feather name="more-horizontal" size={24} color="black" />
+            <Pressable onPress={() => setIsEditing(!isEditing)}>
+              {!isEditing ? <Text>Edit</Text> : <Text style={{color:"#FF006E"}}>Done</Text>}
+            </Pressable>
+            <Ionicons name="filter-circle-outline" size={24} color="black" />
           </View>
         </View>
         <SearchBar
@@ -53,8 +71,10 @@ export default function dislikedArtists() {
         <View style={styles.songContainer}>
           {user.dislikedArtists.map((artistID: number) => (
             <ArtistIcon
-              data={artistData.find((artist) => artist.id === artistID)}
+              data={artistData.find((artist: Artist) => artist.id === artistID)}
               key={artistID}
+              edit={isEditing}
+              onDelete={() => deleteDislikedArtist(artistID)}
             />
           ))}
         </View>
@@ -67,8 +87,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-around",
-    padding: 20
-  }, 
+    padding: 20,
+  },
   flexRow: {
     display: "flex",
     flexDirection: "row",
