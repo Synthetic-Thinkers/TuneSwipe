@@ -1,38 +1,23 @@
 import React, { useEffect } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 import { useFonts, Inter_800ExtraBold } from "@expo-google-fonts/inter";
+import { useNavigation } from "expo-router";
+import likedData from "./swipe";
 import { useRoute } from '@react-navigation/native';
 
-type ActivityLog = {
-  id: string;
-  mode: string;
-  playlistId: string;
-  swipeResults: Array<{
-    id: string;
-    liked: boolean;
-  }>;
-  timestamp: string;
+type Playlist = {
+  text: string;
 };
 
-type RouteParams = {
-  spotifyID: string;
-  mode: string;
-  activityLog: ActivityLog;
-};
-
-export default function LoadingScreen({ navigation }) {
+export default function PlaylistLoadingScreen({ navigation }) {
   const route = useRoute();
-
-  const { spotifyID, mode, activityLog } = route.params as RouteParams;
+  const { text } = route.params as Playlist || {};
 
   useEffect(() => {
+    // Simulate loading (e.g., checking backend or async storage)
     setTimeout(() => {
-      navigation.replace("Swipe", {
-        spotifyID: spotifyID,
-        mode: mode,
-        activityLog: activityLog,
-      });
-    }, 3000); // 3-second loading time
+      navigation.replace("Playlist", { playlistName: text }); // Replace ensures user can't go back to loading screen
+    }, 3000); // Simulate 3-second loading time
   }, []);
 
   const [fontsLoaded] = useFonts({
@@ -47,7 +32,7 @@ export default function LoadingScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Loading your next vibe check... almost there!</Text>
+      <Text style={styles.text}>Getting your playlist ready... just a few beats away!</Text>
       <Image style={styles.turntableIcon} source={require('../../../assets/images/turntable.gif')} />
     </View>
   );
