@@ -263,7 +263,7 @@ export default function ActivityScreen() {
         {/* App Header */}
         <View style={styles.header}>
           <Text style={styles.appTitle}>
-            <Text style={{ color: '#FFFFFF' }}>TuneSwipe</Text>
+            <Text style={{ color: '#00000' }}>TuneSwipe</Text>
           </Text>
         </View>
 
