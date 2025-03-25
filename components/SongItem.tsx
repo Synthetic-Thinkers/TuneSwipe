@@ -8,8 +8,22 @@ import {
 } from "react-native";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import Feather from "@expo/vector-icons/Feather";
+import {
+  Menu,
+  MenuOptions,
+  MenuOption,
+  MenuTrigger,
+} from "react-native-popup-menu";
 
-const SongItem = ({ name, artist, imageUri }: {name:string, artist:string, imageUri:string}) => {
+const SongItem = ({
+  data,
+  edit,
+  onDelete,
+}: {
+  data: any;
+  edit?: boolean;
+  onDelete: Function;
+}) => {
   return (
     <View>
       <View style={styles.songContainer}>
@@ -21,13 +35,31 @@ const SongItem = ({ name, artist, imageUri }: {name:string, artist:string, image
             alignItems: "center",
           }}
         >
-          <Image source={{ uri: imageUri }} style={styles.image} />
+          <Image
+            source={
+              data.imageUrl
+                ? { uri: data.imageUrl } // If imageUrl exists, use it
+                : require("../assets/images/vinyl.jpg") // Fallback to local image
+            }
+            style={styles.image}
+          />
           <View style={styles.songInfoContainer}>
-            <Text>{name}</Text>
-            <Text>{artist}</Text>
+            <Text>{data.title}</Text>
+            <Text style={{ color: "#7E7E82" ,fontSize: 12}}>
+              {data.artist ? data.artist : "Artist"}
+            </Text>
           </View>
         </View>
-        <Feather name="more-horizontal" size={24} color="black" />
+        <Menu>
+          <MenuTrigger>
+            <Feather name="more-horizontal" size={24} color="black" />
+          </MenuTrigger>
+          <MenuOptions>
+            <MenuOption onSelect={() => onDelete()}>
+              <Text style={{ color: "red" }}>Delete</Text>
+            </MenuOption>
+          </MenuOptions>
+        </Menu>
       </View>
     </View>
   );
@@ -40,7 +72,7 @@ const styles = StyleSheet.create({
     display: "flex",
     flexDirection: "row",
     alignItems: "center",
-    padding: 8,
+    padding: 5,
     gap: 5,
     justifyContent: "space-between",
   },

@@ -1,19 +1,64 @@
-import { MaterialIcons } from "@expo/vector-icons";
 import { Text, View, StyleSheet, Image, ScrollView } from "react-native";
 import ArtistIcon from "@/components/profileScreen/ArtistIcon";
 import { SearchBar } from "@rneui/themed";
 import { Link } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import Feather from "@expo/vector-icons/Feather";
-import AntDesign from "@expo/vector-icons/AntDesign";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Pressable } from "react-native";
 import { useLocalSearchParams } from "expo-router";
+import supabase from "../../utils/supabaseClient";
+import SongItem from "@/components/SongItem";
 
 export default function likedSongs() {
+  const { user: userString, songData: songDataString } =
+    useLocalSearchParams() as { user: string; songData: string };
+
   const [search, setSearch] = useState("");
+  const [user, setUser] = useState(JSON.parse(userString));
+  const [songData, setSongData] = useState(JSON.parse(songDataString));
+  const [artistData, setArtistData] = useState({});
+
+  //Fetch associated artist data for all liked songs
+  useEffect(() => {
+    const fetchArtistData = async () => {
+      const artistIDs = songData.map((song: any) => song.artistID);
+      console.log(artistIDs)
+      const { data, error } = await supabase
+        .from("Artist")
+        .select("*")
+        .in("id", artistIDs);
+
+      if (error) {
+        console.error("Error fetching artist data:", error);
+      } else {
+        console.log("Data", data)
+      }
+    };
+
+    fetchArtistData();
+  }, []);
+
   const updateSearch = (search: string) => {
     setSearch(search);
+  };
+
+  const deleteLikedSong = async (id: number) => {
+    const updatedLikedSongs = user.likedSongs.filter(
+      (songID: number) => songID !== id
+    );
+    console.log("Updated songs", updatedLikedSongs);
+    const { error } = await supabase
+      .from("User")
+      .update({ likedSongs: updatedLikedSongs })
+      .eq("id", user?.id);
+
+    if (error) {
+      console.error("Error deleting artist:", error);
+    } else {
+      console.log("Song deleted successfully");
+      // Update the local state to reflect the changes
+      setUser({ ...user, likedSongs: updatedLikedSongs });
+    }
   };
 
   return (
@@ -38,6 +83,15 @@ export default function likedSongs() {
           value={search}
           containerStyle={{ flex: 1, borderRadius: 15 }}
         />
+        <View style={styles.songContainer}>
+          {user.likedSongs.map((songID: number) => (
+            <SongItem
+              data={songData.find((song: any) => song.id === songID)}
+              key={songID}
+              onDelete={() => deleteLikedSong(songID)}
+            />
+          ))}
+        </View>
       </View>
     </ScrollView>
   );
@@ -45,10 +99,8 @@ export default function likedSongs() {
 
 const styles = StyleSheet.create({
   songContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-around",
-    padding: 20,
+    flexDirection: "column",
+    padding: 8,
   },
   flexRow: {
     display: "flex",

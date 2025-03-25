@@ -6,16 +6,63 @@ import { Link } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Feather from "@expo/vector-icons/Feather";
 import AntDesign from "@expo/vector-icons/AntDesign";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable } from "react-native";
 import { useLocalSearchParams } from "expo-router";
+import SongItem from "@/components/SongItem";
+import supabase from "@/app/utils/supabaseClient";
 
 export default function dislikedSongs() {
+    const { user: userString, songData: songDataString } =
+    useLocalSearchParams() as { user: string; songData: string };
+
   const [search, setSearch] = useState("");
+  const [user, setUser] = useState(JSON.parse(userString));
+  const [songData, setSongData] = useState(JSON.parse(songDataString));
+  const [artistData, setArtistData] = useState({});
+  //Fetch associated artist data for all liked songs
+  useEffect(() => {
+    const fetchArtistData = async () => {
+      const artistIDs = songData.map((song: any) => song.artistID);
+      console.log(artistIDs)
+      const { data, error } = await supabase
+        .from("Artist")
+        .select("*")
+        .in("id", artistIDs);
+
+      if (error) {
+        console.error("Error fetching artist data:", error);
+      } else {
+        console.log("Data", data)
+      }
+    };
+
+    fetchArtistData();
+  }, []);
+  
   const updateSearch = (search: string) => {
     setSearch(search);
   };
+  
+  const deleteDislikedSong = async (id: number) => {
+    const updatedDislikedSongs = user.dislikedSongs.filter(
+      (songID: number) => songID !== id
+    );
+    console.log("Updated songs", updatedDislikedSongs);
+    const { error } = await supabase
+      .from("User")
+      .update({ dislikedSongs: updatedDislikedSongs })
+      .eq("id", user?.id);
 
+    if (error) {
+      console.error("Error deleting artist:", error);
+    } else {
+      console.log("Song deleted successfully");
+      // Update the local state to reflect the changes
+      setUser({ ...user, dislikedSongs: updatedDislikedSongs });
+    }
+  };
+  
   return (
     <ScrollView>
       <View>
@@ -38,6 +85,15 @@ export default function dislikedSongs() {
           value={search}
           containerStyle={{ flex: 1, borderRadius: 15 }}
         />
+        <View style={styles.songContainer}>
+          {user.dislikedSongs.map((songID: number) => (
+            <SongItem
+              data={songData.find((song: any) => song.id === songID)}
+              key={songID}
+              onDelete={() => deleteDislikedSong(songID)}
+            />
+          ))}
+        </View>
       </View>
     </ScrollView>
   );
@@ -45,10 +101,8 @@ export default function dislikedSongs() {
 
 const styles = StyleSheet.create({
   songContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-around",
-    padding: 20,
+    flexDirection: "column",
+    padding: 8,
   },
   flexRow: {
     display: "flex",

@@ -34,6 +34,7 @@ export default function ProfileScreen() {
   const [isPressed, setIsPressed] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [artistData, setArtistData] = useState<any[]>([]);
+  const [songData, setSongData] = useState<any[]>([]);
   const userId = "2"; // Replace with the user's ID
 
   //Load avatar from supbase
@@ -63,14 +64,28 @@ export default function ProfileScreen() {
           ...userData.likedArtists,
           ...userData.dislikedArtists,
         ];
-        const { data: artistData, error: songError } = await supabase
+        const { data: artistData, error: artistError } = await supabase
           .from("Artist")
           .select("*")
           .in("id", artistIds);
+        if (artistError) {
+          throw artistError;
+        } else {
+          setArtistData(artistData);
+        }
+        //Fetch all song data from users liked and disliked
+        const songIDs = [
+          ...userData.likedSongs,
+          ...userData.dislikedSongs,
+        ];
+        const { data: songData, error: songError } = await supabase
+          .from("Song")
+          .select("*")
+          .in("id", songIDs);
         if (songError) {
           throw songError;
         } else {
-          setArtistData(artistData);
+          setSongData(songData);
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -79,6 +94,8 @@ export default function ProfileScreen() {
     }
     fetchData();
   }, []);
+
+  console.log(songData)
 
   const pickImage = async () => {
     try {
@@ -181,7 +198,6 @@ export default function ProfileScreen() {
               <ArtistIcon
                 data={artistData.find((artist) => artist.id === artistID)}
                 key={artistID}
-
               />
             ))}
           </ScrollView>
@@ -213,7 +229,6 @@ export default function ProfileScreen() {
               <ArtistIcon
                 data={artistData.find((artist) => artist.id === artistID)}
                 key={artistID}
-  
               />
             ))}
           </ScrollView>
@@ -225,7 +240,7 @@ export default function ProfileScreen() {
               href={{
                 pathname: "/profile/likedSongs",
                 params: {
-                  artistData: JSON.stringify(artistData),
+                  songData: JSON.stringify(songData),
                   user: JSON.stringify(user),
                 },
               }}
@@ -246,7 +261,7 @@ export default function ProfileScreen() {
               href={{
                 pathname: "/profile/dislikedSongs",
                 params: {
-                  artistData: JSON.stringify(artistData),
+                  songData: JSON.stringify(songData),
                   user: JSON.stringify(user),
                 },
               }}
