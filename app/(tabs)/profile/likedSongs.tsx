@@ -16,13 +16,13 @@ export default function likedSongs() {
   const [search, setSearch] = useState("");
   const [user, setUser] = useState(JSON.parse(userString));
   const [songData, setSongData] = useState(JSON.parse(songDataString));
-  const [artistData, setArtistData] = useState({});
+  const [artistData, setArtistData] = useState<any[]>([]);
 
   //Fetch associated artist data for all liked songs
   useEffect(() => {
     const fetchArtistData = async () => {
       const artistIDs = songData.map((song: any) => song.artistID);
-      console.log(artistIDs)
+      console.log(artistIDs);
       const { data, error } = await supabase
         .from("Artist")
         .select("*")
@@ -31,7 +31,8 @@ export default function likedSongs() {
       if (error) {
         console.error("Error fetching artist data:", error);
       } else {
-        console.log("Data", data)
+        console.log("Data", data);
+        setArtistData(data)
       }
     };
 
@@ -84,13 +85,20 @@ export default function likedSongs() {
           containerStyle={{ flex: 1, borderRadius: 15 }}
         />
         <View style={styles.songContainer}>
-          {user.likedSongs.map((songID: number) => (
-            <SongItem
-              data={songData.find((song: any) => song.id === songID)}
-              key={songID}
-              onDelete={() => deleteLikedSong(songID)}
-            />
-          ))}
+          {user.likedSongs.map((songID: number) => {
+            const song = songData.find((song: any) => song.id === songID);
+            const artist = artistData.find(
+              (artist) => artist.id === song.artistID
+            );
+            return (
+              <SongItem
+                key={song.id}
+                data={song}
+                onDelete={() => deleteLikedSong(songID)}
+                artistName={artist ? artist.name : "Unknown Artist"} // Handle undefined case
+              />
+            );
+          })}
         </View>
       </View>
     </ScrollView>

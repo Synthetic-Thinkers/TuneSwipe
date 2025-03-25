@@ -19,7 +19,8 @@ export default function dislikedSongs() {
   const [search, setSearch] = useState("");
   const [user, setUser] = useState(JSON.parse(userString));
   const [songData, setSongData] = useState(JSON.parse(songDataString));
-  const [artistData, setArtistData] = useState({});
+  const [artistData, setArtistData] = useState<any[]>([]);
+
   //Fetch associated artist data for all liked songs
   useEffect(() => {
     const fetchArtistData = async () => {
@@ -33,7 +34,8 @@ export default function dislikedSongs() {
       if (error) {
         console.error("Error fetching artist data:", error);
       } else {
-        console.log("Data", data)
+        setArtistData(data)
+        console.log("Dislike Song Screen: ", data)
       }
     };
 
@@ -86,13 +88,21 @@ export default function dislikedSongs() {
           containerStyle={{ flex: 1, borderRadius: 15 }}
         />
         <View style={styles.songContainer}>
-          {user.dislikedSongs.map((songID: number) => (
-            <SongItem
-              data={songData.find((song: any) => song.id === songID)}
-              key={songID}
-              onDelete={() => deleteDislikedSong(songID)}
-            />
-          ))}
+          {user.dislikedSongs.map((songID: number) => {
+            const song = songData.find((song: any) => song.id === songID)
+            const artist = artistData.find(
+              (artist) => artist.id === song.artistID
+            );
+            return (
+              <SongItem
+                key={song.id}
+                data={song}
+                onDelete={() => deleteDislikedSong(songID)}
+                artistName={artist ? artist.name : "Unknown Artist"} // Handle undefined case
+              />
+            );
+          })}
+          
         </View>
       </View>
     </ScrollView>

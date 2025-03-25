@@ -17,13 +17,15 @@ import {
 
 const SongItem = ({
   data,
-  edit,
   onDelete,
+  artistName
 }: {
   data: any;
-  edit?: boolean;
   onDelete: Function;
+  artistName: string;
 }) => {
+
+
   return (
     <View>
       <View style={styles.songContainer}>
@@ -46,7 +48,7 @@ const SongItem = ({
           <View style={styles.songInfoContainer}>
             <Text>{data.title}</Text>
             <Text style={{ color: "#7E7E82" ,fontSize: 12}}>
-              {data.artist ? data.artist : "Artist"}
+              {artistName}
             </Text>
           </View>
         </View>
