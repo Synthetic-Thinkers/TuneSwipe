@@ -17,10 +17,10 @@ let successfulAuth = false;
 
 export default function login() {
 	const backgroundImage = require('../assets/images/TuneSwipe_Background.png');
-	const logo = require('../assets/images/TuneSwipe_Logo.png')
+	const logo = require('../assets/images/TuneSwipe_Logo.png');
 	const router = useRouter();
 	const sheetRef = useRef<BottomSheet>(null);
-	const [isOpen, setIOpen] = useState(false);
+	const [isOpen, setIOpen] = useState(false);	
 	const handleSanpPress = useCallback((index: number) => {
 		sheetRef.current?.snapToIndex(index);
 		setIOpen(true);
@@ -51,10 +51,16 @@ export default function login() {
 useEffect (() => {
 	if(response?.type == "success") {
 		const {access_token}= response.params;
-		console.log('accessToken = ', access_token);
+		console.log('accessToken -> ', access_token);
     	successfulAuth = true;
 		getUser(access_token);
     	router.replace("/(tabs)/library")
+	}
+	else if (response?.type == "error") {
+		console.error("Auth error ->", response.error);
+	}
+	else {
+		console.log("Waiting for Spotify Auth");
 	}
 }, [response]);
 
@@ -63,14 +69,14 @@ const getUser = async (token: string) => {
 	try{
 		const resultFromCall = await fetch(process.env.EXPO_PUBLIC_USER_DOMAIN ?? " ", {
 			method: "GET",
-			headers: {
+			headers: { 
 				Authorization: `Bearer ${token}`,
 				"Content-Type": "application/json",
 			},
 		});
 		const jsonData = await resultFromCall.json();
 		const spotifyID = jsonData.id;
-		console.log("Signed in user UserID: ", spotifyID);
+		console.log("Signed in user spotifyID: ", spotifyID);
 
 		if (!spotifyID){
 			console.error("Error - Could not get Spotify ID");
@@ -83,10 +89,10 @@ const getUser = async (token: string) => {
 			.select('*')
 			.eq('spotifyID', spotifyID)
 			.single();
-
+		
 		if (User) {
-			console.log("User already exists in Supabase.");
-		}
+			console.log("User already exists in User table.");
+		} 
 		else {
 			// Insert new user
 			const { data, error: insertError } = await supabase
@@ -95,21 +101,133 @@ const getUser = async (token: string) => {
     				{ spotifyID: spotifyID},
   				])
   				.select()
-
+			
 			if (insertError) {
 				console.error("ERROR - Could not insert user:", insertError.message);
 			}
 			else {
-				console.log("New user added to Supabase!");
+				console.log("New user added to User table!");
 			}
-    }
-    // Store the spotifyID in AsyncStorage
-    await AsyncStorage.setItem("spotifyID", spotifyID);
-
+		}
+		await getTopArtists(token, spotifyID);
+		
 	} catch (error) {
 		console.error("ERROR - Could not get user.")
 	}
 };
+
+const getTopArtists = async (token: string, sID: string) => {
+	console.log("-- From getTopArtists --");
+
+	const allGenres: any[] = [];
+
+	try{
+		const resultFromCall = await fetch("https://api.spotify.com/v1/me/top/artists?limit=10", {
+			method: "GET",
+			headers: { 
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json",
+			},
+		});
+		const jsonData = await resultFromCall.json();
+		const artists = jsonData.items.map((artist: { name: any; }) => artist.name);
+		console.log("Top 10 artists:", artists);
+		console.log("SpotifyID from getTopArtist: ", sID);
+
+		// Get users top genres. Genres are pull from the same API as top artists. The genres are those of the artists.
+		jsonData.items.forEach((item: { genres: any; }) => {
+			allGenres.push(...item.genres);
+		});
+		console.log("Users top genres: ", allGenres)
+		
+		//Update User table
+		const{data, error} = await supabase
+			.from('User')
+			.update({ top10Artists: artists, topGenres: allGenres })
+			.eq('spotifyID', sID)
+			.select();
+		
+		if (error) {
+			console.error("ERROR - Could not update top10Artists and topGenres:", error.message);
+		} else {
+			console.log("Successfully updated top10Artists and topGenres in user table!");
+		}
+
+		await getTopTracks(token, sID);
+
+	} catch (error) {
+		console.error("ERROR - Could not get top artists or genres.")
+	}
+};
+
+const getTopTracks = async (token: string, sID: string) => {
+	console.log("-- From getTopTracks --");
+
+	try{
+		const resultFromCall = await fetch("https://api.spotify.com/v1/me/top/tracks?limit=10", {
+			method: "GET",
+			headers: { 
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json",
+			},
+		});
+		const jsonData = await resultFromCall.json();
+		const tracks = jsonData.items.map((track: { name: any; }) => track.name);
+		console.log("Top 10 tracks:", tracks);
+		console.log("SpotifyID from getTopTracks: ", sID);
+		
+		//Update User table
+		const{data, error} = await supabase
+			.from('User')
+			.update({ top10Tracks: tracks })
+			.eq('spotifyID', sID)
+			.select();
+		
+		if (error) {
+			console.error("ERROR - Could not update top10Tracks:", error.message);
+		} else {
+			console.log("Successfully updated top10Tracks!");
+		}
+
+		await getRecentTracks(token, sID);
+
+	} catch (error) {
+		console.error("ERROR - Could not get top tracks")
+	}
+}
+
+const getRecentTracks = async (token: string, sID: string) => {
+	console.log("-- From getRecentTracks --");
+
+	try{
+		const resultFromCall = await fetch("https://api.spotify.com/v1/me/player/recently-played?limit=20", {
+			method: "GET",
+			headers: { 
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json",
+			},
+		});
+		const jsonData = await resultFromCall.json();
+		const recentTracks = jsonData.items.map((item: {track: any; name: any; }) => item.track.name);
+		console.log("Top 20 recently played tracks:", recentTracks);
+		
+		//Update User table
+		const{data, error} = await supabase
+			.from('User')
+			.update({ recentlyPlayed: recentTracks })
+			.eq('spotifyID', sID)
+			.select();
+		
+		if (error) {
+			console.error("ERROR - Could not update recentlyPlayed:", error.message);
+		} else {
+			console.log("Successfully updated recentlyPlayed!");
+		}
+
+	} catch (error) {
+		console.error("ERROR - Could not get recently played tracks.")
+	}
+}
 
 return (
 	<GestureHandlerRootView style ={{flex:1}}>
@@ -118,10 +236,9 @@ return (
 			<Text style = {{height: 80, fontSize: 20}}>Turn up the soundtrack of {'\n'}your life. Join the Beat Today</Text>
 
 			<View style={styles.button}>
-				<Button
+				<Button 
 					title="Start Now"
-					color= "white"
-					onPress={() => handleSanpPress(0)}
+					onPress={() => handleSanpPress(0)} 
 				/>
 			</View>
 
@@ -135,17 +252,16 @@ return (
 				<BottomSheetView style={styles.bottomSheetContainer	}>
 					<Text style={{fontSize: 25, height:35}}> Get Started</Text>
 					<Text style={{fontSize: 16, height:35}}> Login with Spofity and let the magic begin ... </Text>
-
+				
 					<View style={styles.buttonSpotify}>
-						<Button
-							title= "Sign in with Spotify"
-							color= "white"
-							onPress={() => promptAsync()}
-						/>
+						<Button 
+							title= "Sign in with Spotify" 
+							onPress={() => promptAsync()} 
+						/> 
 					</View>
 				</BottomSheetView>
 			</BottomSheet>
-		</ImageBackground>
+		</ImageBackground>	
 	</GestureHandlerRootView>
 );
 }
