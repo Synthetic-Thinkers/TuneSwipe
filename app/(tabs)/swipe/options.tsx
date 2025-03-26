@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../../supabase';
 
 type ActivityLog = {
-  id: string;
+ _id: number;
   mode: string;
   playlistId: string;
   swipeResults: Array<{
@@ -64,7 +64,7 @@ export default function OptionsScreen({ navigation }) {
     if (error) {
      console.error("Error fetching user:", error.message);
     } else {
-     console.log("Fetched activity log:", data.activityLog);
+     console.log("Fetched ALL activity log:", data.activityLog);
     }
 
     const existingLogs = data?.activityLog || [];
@@ -91,7 +91,8 @@ export default function OptionsScreen({ navigation }) {
       console.error("Error updating activity log:", updatedError.message);
     } else {
       console.log("Mode selection saved:", mode);
-      navigation.navigate("Loading", {
+      console.log("ALL Activity Logs Saved: ", updatedLogs);
+      navigation.navigate("SwipeIndex", {
         spotifyID: spotifyID,
         mode: mode,
         activityLog: newLogEntry,

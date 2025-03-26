@@ -1,0 +1,64 @@
+// THIS IS FROM SWIPEINDEX WHERE THE BLUR SCREEN DISPLAYS WITH WORDS & ARROWS
+
+<TouchableOpacity style={styles.container} onPress={onPressStart} activeOpacity={1}>
+    <View style={styles.container}>
+          <View style={styles.cardContainer}>
+            {mode === 'songs' ? (
+              firstCard.image ? (
+                  <Image source={{ uri: firstCard.image }} style={styles.image} />
+               ) : (
+                  <Image source={require('../../../assets/images/defaultImage.png')} style={styles.image} />
+              )
+            ) : mode === 'artists' ? (
+                firstCard.imageUrl ? (
+                  <Image source={{ uri: firstCard.imageUrl }} style={styles.image} />
+                ) : (
+                  <Image source={require('../../../assets/images/defaultImage.png')} style={styles.image} />
+                )
+              ) : mode === 'genres' ? (
+                firstCard.image ? (
+                  <Image source={{ uri: firstCard.image }} style={styles.image} />
+               ) : (
+                  <Image source={require('../../../assets/images/defaultImage.png')} style={styles.image} />
+              )
+            ) : null}
+            <View style={styles.textContainer}>
+              {mode === 'songs' ? (
+                <Text style={styles.songText}>
+                  {firstCard.artistID} - {firstCard.title}
+                </Text>
+              ) : mode === 'artists' ? (
+                <Text style={styles.songText}>
+                  {firstCard.name}
+                </Text>
+              ) : mode === 'genres' ? (
+                <Text style={styles.songText}>
+                  {firstCard.name}
+                </Text>
+              ) : null}
+              <Text style={styles.genreText}>{firstCard.genres}</Text>
+            </View>
+            <View style={styles.choiceContainer}>
+              <View style={styles.rectangle}></View>
+              <Ionicons name="close-circle-outline" size={80} style={styles.dislikeIcon} />
+              <Ionicons name="heart-circle-outline" size={80} style={styles.likeIcon} />
+            </View>
+            </View>
+      </View>
+      {showBlur && (
+        <>
+          <BlurView intensity={30} style={styles.blurView} tint="light" />
+          <View style={styles.instructContainer}>
+            <Text style={styles.swipeText}>Swipe</Text>
+            <Text style={styles.directionsText}>
+              <Text style={styles.rightText}>right</Text> to like, <Text style={styles.leftText}>left</Text> to dislike.
+            </Text>
+            <Text style={styles.tapText}>Tap anywhere to start swiping!</Text>
+            <View style={styles.arrowContainer}>
+              <Entypo name="arrow-left" size={80} style={styles.arrowIcon} />
+              <Entypo name="arrow-right" size={80} style={styles.arrowIcon} />
+            </View>
+          </View>
+        </>
+      )}
+    </TouchableOpacity>
