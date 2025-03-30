@@ -69,14 +69,14 @@ const getUser = async (token: string) => {
 	try{
 		const resultFromCall = await fetch(process.env.EXPO_PUBLIC_USER_DOMAIN ?? " ", {
 			method: "GET",
-			headers: { 
+			headers: {
 				Authorization: `Bearer ${token}`,
 				"Content-Type": "application/json",
 			},
 		});
 		const jsonData = await resultFromCall.json();
 		const spotifyID = jsonData.id;
-		console.log("Signed in user spotifyID: ", spotifyID);
+		console.log("Signed in user UserID: ", spotifyID);
 
 		if (!spotifyID){
 			console.error("Error - Could not get Spotify ID");
@@ -89,10 +89,10 @@ const getUser = async (token: string) => {
 			.select('*')
 			.eq('spotifyID', spotifyID)
 			.single();
-		
+
 		if (User) {
-			console.log("User already exists in User table.");
-		} 
+			console.log("User already exists in Supabase.");
+		}
 		else {
 			// Insert new user
 			const { data, error: insertError } = await supabase
@@ -101,16 +101,17 @@ const getUser = async (token: string) => {
     				{ spotifyID: spotifyID},
   				])
   				.select()
-			
+
 			if (insertError) {
 				console.error("ERROR - Could not insert user:", insertError.message);
 			}
 			else {
-				console.log("New user added to User table!");
+				console.log("New user added to Supabase!");
 			}
-		}
-		await getTopArtists(token, spotifyID);
-		
+    }
+    // Store the spotifyID in AsyncStorage
+    await AsyncStorage.setItem("spotifyID", spotifyID);
+
 	} catch (error) {
 		console.error("ERROR - Could not get user.")
 	}

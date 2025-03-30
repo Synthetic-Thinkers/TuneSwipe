@@ -18,14 +18,12 @@ import {
 const SongItem = ({
   data,
   onDelete,
-  artistName
+  artistName,
 }: {
   data: any;
   onDelete: Function;
   artistName: string;
 }) => {
-
-
   return (
     <View>
       <View style={styles.songContainer}>
@@ -37,19 +35,18 @@ const SongItem = ({
             alignItems: "center",
           }}
         >
-          <Image
-            source={
-              data.imageUrl
-                ? { uri: data.imageUrl } // If imageUrl exists, use it
-                : require("../assets/images/vinyl.jpg") // Fallback to local image
-            }
-            style={styles.image}
-          />
+          {data.imageUrl ? (
+            <Image source={{ uri: data.imageUrl }} style={styles.image} />
+          ) : (
+            <Image
+              source={require("../assets/images/vinyl.jpg")}
+              style={styles.image}
+            />
+          )}
+
           <View style={styles.songInfoContainer}>
             <Text>{data.title}</Text>
-            <Text style={{ color: "#7E7E82" ,fontSize: 12}}>
-              {artistName}
-            </Text>
+            <Text style={{ color: "#7E7E82", fontSize: 12 }}>{artistName}</Text>
           </View>
         </View>
         <Menu>

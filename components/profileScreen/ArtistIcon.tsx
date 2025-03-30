@@ -28,7 +28,7 @@ const ArtistIcon = ({ data, edit, onDelete }: { data: any; edit?: boolean, onDel
           </Pressable>
         </View>
       )}
-      <Text numberOfLines={1} ellipsizeMode="head" style={styles.artistName}>
+      <Text numberOfLines={1} ellipsizeMode="tail" style={styles.artistName}>
         {data.name}
       </Text>
     </View>

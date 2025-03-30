@@ -27,6 +27,7 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import supabase from "@/app/utils/supabaseClient";
 import { Link, router } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function ProfileScreen() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -35,31 +36,34 @@ export default function ProfileScreen() {
   const [user, setUser] = useState<any>(null);
   const [artistData, setArtistData] = useState<any[]>([]);
   const [songData, setSongData] = useState<any[]>([]);
-  const userId = "2"; // Replace with the user's ID
 
-  //Load avatar from supbase
   useEffect(() => {
     async function fetchData() {
       try {
-        // Fetch the avatar URL from Supabase
-        const url = await fetchAvatarUrl(userId);
-        if (url) {
-          setAvatarUrl(url);
-          await storeAvatarUrl(userId, url); // Store the URL locally
-        }
+        const storedId = await AsyncStorage.getItem("spotifyID");
 
+        // Check if storedId is null or undefined
+        if (!storedId) {
+          console.error("No stored Spotify ID found.");
+          setLoading(false);
+          return;
+        }
+    
         const { data: userData, error: userError } = await supabase
           .from("User")
           .select("*")
-          .eq("id", userId)
+          .eq("spotifyID", storedId)
           .single();
+
         if (userError) {
           throw userError;
-        } else {
+        } 
+        else {
           setUser(userData);
           console.log(userData);
         }
-        //Fetch artist data using the IDs from the user data
+
+        //Fetch all artist data related to a user's liked and disliked artists
         const artistIds = [
           ...userData.likedArtists,
           ...userData.dislikedArtists,
@@ -73,11 +77,9 @@ export default function ProfileScreen() {
         } else {
           setArtistData(artistData);
         }
-        //Fetch all song data from users liked and disliked
-        const songIDs = [
-          ...userData.likedSongs,
-          ...userData.dislikedSongs,
-        ];
+
+        //Fetch all song data from a user's liked and disliked songs
+        const songIDs = [...userData.likedSongs, ...userData.dislikedSongs];
         const { data: songData, error: songError } = await supabase
           .from("Song")
           .select("*")
@@ -87,6 +89,12 @@ export default function ProfileScreen() {
         } else {
           setSongData(songData);
         }
+
+        // Fetch the avatar URL from Supabase
+        const url = await fetchAvatarUrl(userData.id);
+        if (url) {
+          setAvatarUrl(url);
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -94,8 +102,6 @@ export default function ProfileScreen() {
     }
     fetchData();
   }, []);
-
-  console.log(songData)
 
   const pickImage = async () => {
     try {
@@ -110,9 +116,9 @@ export default function ProfileScreen() {
         // Ensure all images are stored as png
         const png = await convertImageToPNG(result.assets[0].uri);
         const pngBase64 = png!.base64;
-        const data = await uploadAvatar(userId, pngBase64);
+        const data = await uploadAvatar(user.id, pngBase64);
         if (data) {
-          const url = await fetchAvatarUrl(userId);
+          const url = await fetchAvatarUrl(user.id);
           setAvatarUrl(url);
         }
       }
@@ -121,8 +127,8 @@ export default function ProfileScreen() {
       // You can also display an error message to the user if needed
     }
     setIsPressed(false);
-    console.log(isPressed);
   };
+
   if (loading) {
     return (
       <View>
