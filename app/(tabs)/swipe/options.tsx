@@ -91,7 +91,7 @@ export default function OptionsScreen({ navigation }) {
       console.error("Error updating activity log:", updatedError.message);
     } else {
       console.log("Mode selection saved:", mode);
-      navigation.navigate("Loading", {
+      navigation.navigate("Swipe", {
         spotifyID: spotifyID,
         mode: mode,
         activityLog: newLogEntry,
