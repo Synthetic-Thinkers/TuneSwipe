@@ -56,6 +56,16 @@ export default function TabLayout() {
             ),
           }}
         />
+        <Tabs.Screen
+          name='activity'
+          options={{
+            headerTitle: () => <CustomerHeader />,
+            title: 'Activity',
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons name={focused ? 'musical-notes' : 'musical-notes-outline'} color={color} size={24} />
+            ),
+          }}
+        />
          <Tabs.Screen
           name='library'
           options={{
