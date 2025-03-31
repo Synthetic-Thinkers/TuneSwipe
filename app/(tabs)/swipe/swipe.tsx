@@ -1,4 +1,4 @@
-import React, { useState , useEffect} from "react";
+import React, { useState , useEffect, useRef} from "react";
 import { View, Text, StyleSheet, Image, TouchableOpacity} from "react-native";
 import Swiper from 'react-native-deck-swiper';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -37,6 +37,7 @@ export default function SwipeScreen({ navigation }) {
   const [sessionID, setSessionID] = useState<number>(activityLog._id);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [showBlur, setShowBlur] = useState(true);
+  const swiperRef = useRef<Swiper<any>>(null);
 
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -231,18 +232,27 @@ export default function SwipeScreen({ navigation }) {
                 </View>
                 <View style={styles.choiceContainer}>
                   <View style={styles.rectangle}></View>
-                    <Ionicons name="close-circle-outline" size={80} style={styles.dislikeIcon} />
-                    <Ionicons name="heart-circle-outline" size={80} style={styles.likeIcon} />
+                  <TouchableOpacity
+                    style={styles.dislikeButton}
+                    onPress={() => swiperRef.current?.swipeLeft()} >
+                    <Ionicons name="close-circle-outline" size={80} style={styles.dislikeButton} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.likeButton}
+                    onPress={() => swiperRef.current?.swipeRight()} >
+                    <Ionicons name="heart-circle-outline" size={80} style={styles.likeButton} />
+                  </TouchableOpacity>
                 </View>
               </View>
             )}
+            ref={swiperRef}
             onSwipedRight={handleSwipeRight}
             onSwipedLeft={handleSwipeLeft}
             stackSize={10}
             backgroundColor="transparent"
             containerStyle={styles.swiperContainer}
             cardIndex={index}
-            onSwiped={(swipeIndex) => setIndex(swipeIndex + 1)}
+            onSwiped={(swipeIndex) => {setIndex(swipeIndex + 1);}}
             onSwipedAll={handleSwipedAll}
           />
         )}
@@ -368,6 +378,16 @@ const styles = StyleSheet.create({
     color: '#98F5E1',
     position: 'absolute',
     left: 216,
+  },
+  dislikeButton: {
+    color: '#CC0058',
+    position: 'absolute',
+    left: 48,
+  },
+  likeButton: {
+    color: '#98F5E1',
+    position: 'absolute',
+    left: 110,
   },
   arrowContainer: {
     flexDirection: 'row',

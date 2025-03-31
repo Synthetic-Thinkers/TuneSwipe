@@ -92,7 +92,7 @@ export default function OptionsScreen({ navigation }) {
     } else {
       console.log("Mode selection saved:", mode);
       console.log("ALL Activity Logs Saved: ", updatedLogs);
-      navigation.navigate("SwipeIndex", {
+      navigation.navigate("Swipe", {
         spotifyID: spotifyID,
         mode: mode,
         activityLog: newLogEntry,
