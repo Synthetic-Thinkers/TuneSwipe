@@ -31,6 +31,9 @@ export default function ActivityScreen() {
 
   // Queue state
   const [queue, setQueue] = useState<Song[]>([]);
+  
+  // History state to keep track of previously played songs
+  const [history, setHistory] = useState<Song[]>([]);
 
   // Loading and error states
   const [loading, setLoading] = useState(true);
@@ -127,21 +130,21 @@ export default function ActivityScreen() {
         
         // Set fallback data
         setCurrentSong({
-          id: '1',
-          title: 'Good 4 U',
-          artist: 'Olivia Rodrigo',
-          cover: DEFAULT_IMAGE,
-        });
-        
-        setQueue([
-          { id: '2', title: 'Sexy To Someone', artist: 'Clairo', cover: DEFAULT_IMAGE },
-          { id: '3', title: 'Video Games', artist: 'Lana Del Rey', cover: DEFAULT_IMAGE },
-          { id: '4', title: 'Die For You', artist: 'The Weeknd', cover: DEFAULT_IMAGE },
-          { id: '5', title: 'R U Mine?', artist: 'Arctic Monkeys', cover: DEFAULT_IMAGE },
-          { id: '6', title: 'Stargazing', artist: 'The Neighbourhood', cover: DEFAULT_IMAGE },
-          { id: '7', title: 'Telepatia', artist: 'Kali Uchis', cover: DEFAULT_IMAGE },
-          { id: '8', title: 'No One Noticed', artist: 'The Marias', cover: DEFAULT_IMAGE },
-        ]);
+            id: '1',
+            title: 'Good 4 U',
+            artist: 'Olivia Rodrigo',
+            cover: DEFAULT_IMAGE,
+          });
+          
+          setQueue([
+            { id: '2', title: 'Sexy To Someone', artist: 'Clairo', cover: DEFAULT_IMAGE },
+            { id: '3', title: 'Video Games', artist: 'Lana Del Rey', cover: DEFAULT_IMAGE },
+            { id: '4', title: 'Die For You', artist: 'The Weeknd', cover: DEFAULT_IMAGE },
+            { id: '5', title: 'R U Mine?', artist: 'Arctic Monkeys', cover: DEFAULT_IMAGE },
+            { id: '6', title: 'Stargazing', artist: 'The Neighbourhood', cover: DEFAULT_IMAGE },
+            { id: '7', title: 'Telepatia', artist: 'Kali Uchis', cover: DEFAULT_IMAGE },
+            { id: '8', title: 'No One Noticed', artist: 'The Marias', cover: DEFAULT_IMAGE },
+          ]);
       } finally {
         setLoading(false);
       }
@@ -196,13 +199,12 @@ export default function ActivityScreen() {
   const handleSkipNext = (): void => {
     if (!currentSong || queue.length === 0) return;
     
-    // Move current song to end of queue
-    const updatedQueue = [...queue];
-    updatedQueue.push(currentSong);
+    // Add current song to history
+    setHistory(prevHistory => [currentSong, ...prevHistory]);
     
     // Set first song in queue as current and remove it from queue
-    setCurrentSong(updatedQueue[0]);
-    setQueue(updatedQueue.slice(1));
+    setCurrentSong(queue[0]);
+    setQueue(queue.slice(1));
     
     // Reset liked status for new song
     setLiked(false);
@@ -211,21 +213,43 @@ export default function ActivityScreen() {
   };
 
   const handleSkipPrevious = (): void => {
-    // Placeholder for future Spotify integration
-    console.log("Skipped to previous track");
+    if (!currentSong || history.length === 0) {
+      console.log("No previous tracks available");
+      return;
+    }
+    
+    // Get the most recent song from history
+    const previousSong = history[0];
+    
+    // Remove it from history
+    const newHistory = history.slice(1);
+    setHistory(newHistory);
+    
+    // Add current song to beginning of queue
+    setQueue(prevQueue => [currentSong!, ...prevQueue]);
+    
+    // Set previous song as current
+    setCurrentSong(previousSong);
+    
+    // Reset liked status for new song
+    setLiked(false);
+    
+    console.log("Went back to previous track");
   };
 
   // Handle queue item click
   const handleQueueItemClick = (item: Song): void => {
     if (!currentSong) return;
     
-    // Move current song to queue
-    const updatedQueue = [...queue.filter((song: Song) => song.id !== item.id)];
-    updatedQueue.unshift(currentSong);
+    // Add current song to history
+    setHistory(prevHistory => [currentSong, ...prevHistory]);
+    
+    // Remove the selected song from queue
+    const newQueue = queue.filter(song => song.id !== item.id);
     
     // Set selected item as current song
     setCurrentSong(item);
-    setQueue(updatedQueue);
+    setQueue(newQueue);
     
     // Reset liked status for new song
     setLiked(false);
@@ -242,6 +266,30 @@ export default function ActivityScreen() {
         <Text style={styles.queueTitle}>{item.title}</Text>
         <Text style={styles.queueArtist}>{item.artist}</Text>
       </View>
+    </TouchableOpacity>
+  );
+
+  // Render history item
+  const renderHistoryItem = ({ item }: { item: Song }): React.ReactElement => (
+    <TouchableOpacity 
+      style={[styles.queueItem, styles.historyItem]}
+      onPress={() => {
+        // Add current song to history
+        setHistory(prevHistory => [currentSong!, ...prevHistory.filter(song => song.id !== item.id)]);
+        
+        // Set selected history item as current song
+        setCurrentSong(item);
+        
+        // Reset liked status for new song
+        setLiked(false);
+      }}
+    >
+      <Image source={item.cover} style={styles.queueCover} />
+      <View style={styles.queueTextContainer}>
+        <Text style={styles.queueTitle}>{item.title}</Text>
+        <Text style={styles.queueArtist}>{item.artist}</Text>
+      </View>
+      <Ionicons name="time-outline" size={18} color="#777" style={styles.historyIcon} />
     </TouchableOpacity>
   );
 
@@ -304,10 +352,15 @@ export default function ActivityScreen() {
             
             <View style={styles.controlButtons}>
               <TouchableOpacity 
-                style={styles.controlButton}
+                style={[styles.controlButton, history.length === 0 ? styles.disabledButton : null]}
                 onPress={handleSkipPrevious}
+                disabled={history.length === 0}
               >
-                <Ionicons name="play-skip-back" size={24} color="#333" />
+                <Ionicons 
+                  name="play-skip-back" 
+                  size={24} 
+                  color={history.length === 0 ? "#aaa" : "#333"} 
+                />
               </TouchableOpacity>
               
               <TouchableOpacity 
@@ -322,10 +375,15 @@ export default function ActivityScreen() {
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={styles.controlButton}
+                style={[styles.controlButton, queue.length === 0 ? styles.disabledButton : null]}
                 onPress={handleSkipNext}
+                disabled={queue.length === 0}
               >
-                <Ionicons name="play-skip-forward" size={24} color="#333" />
+                <Ionicons 
+                  name="play-skip-forward" 
+                  size={24} 
+                  color={queue.length === 0 ? "#aaa" : "#333"} 
+                />
               </TouchableOpacity>
             </View>
             
@@ -348,21 +406,70 @@ export default function ActivityScreen() {
             <TouchableOpacity 
               style={styles.reactionButton}
               onPress={handleSkipNext}
+              disabled={queue.length === 0}
             >
-              <Ionicons name="close-circle-outline" size={32} color="#333" />
+              <Ionicons name="close-circle-outline" size={32} color={queue.length === 0 ? "#aaa" : "#333"} />
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Queue Section */}
+        {/* Queue and History Section */}
         <View style={styles.queueContainer}>
-          <Text style={styles.queueTitle}>Queue</Text>
+          <View style={styles.tabsContainer}>
+            <Text style={styles.queueTitle}>Queue</Text>
+            {history.length > 0 && (
+              <TouchableOpacity 
+                style={styles.historyButton}
+                onPress={() => Alert.alert(
+                  "History", 
+                  "You have " + history.length + " songs in your history",
+                  [
+                    {
+                      text: "Close",
+                      style: "cancel"
+                    }
+                  ]
+                )}
+              >
+                <Text style={styles.historyButtonText}>{history.length} in history</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          
           {queue.length > 0 ? (
             <FlatList
               data={queue}
               renderItem={renderQueueItem}
               keyExtractor={(item: Song) => item.id}
               showsVerticalScrollIndicator={false}
+              ListHeaderComponent={history.length > 0 ? (
+                  <View style={styles.historySection}>
+                  <Text style={styles.historySectionTitle}>Recently Played</Text>
+                  <FlatList
+                    data={history.slice(0, 3)} // Show only the 3 most recent
+                    renderItem={renderHistoryItem}
+                    keyExtractor={(item: Song) => `history-${item.id}`}
+                    scrollEnabled={false}
+                  />
+                  {history.length > 3 && (
+                    <TouchableOpacity
+                      style={styles.showMoreButton}
+                      onPress={() => Alert.alert(
+                        "History",
+                        "You have " + history.length + " songs in your history",
+                        [
+                          {
+                            text: "Close",
+                            style: "cancel"
+                          }
+                        ]
+                      )}
+                    >
+                      <Text style={styles.showMoreText}>Show more...</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ) : null}
             />
           ) : (
             <Text style={styles.emptyQueueText}>Your queue is empty</Text>
@@ -457,6 +564,9 @@ const styles = StyleSheet.create({
   controlButton: {
     padding: 10,
   },
+  disabledButton: {
+    opacity: 0.5,
+  },
   playButton: {
     backgroundColor: '#fff',
     width: 50,
@@ -481,6 +591,22 @@ const styles = StyleSheet.create({
     padding: 8,
     marginHorizontal: 20,
   },
+  tabsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  historyButton: {
+    backgroundColor: '#f1f1f1',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 15,
+  },
+  historyButtonText: {
+    fontSize: 12,
+    color: '#666',
+  },
   queueContainer: {
     flex: 1,
     backgroundColor: '#fff',
@@ -493,7 +619,6 @@ const styles = StyleSheet.create({
   queueTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 15,
   },
   queueItem: {
     flexDirection: 'row',
@@ -509,9 +634,36 @@ const styles = StyleSheet.create({
   },
   queueTextContainer: {
     marginLeft: 15,
+    flex: 1,
   },
   queueArtist: {
     fontSize: 14,
     color: '#777',
   },
+  historySection: {
+    marginBottom: 20,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  historySectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 10,
+  },
+  historyItem: {
+    backgroundColor: '#f9f9f9',
+  },
+  historyIcon: {
+    marginLeft: 10,
+  },
+  showMoreButton: {
+    alignItems: 'center',
+    padding: 8,
+  },
+  showMoreText: {
+    color: '#3a86ff',
+    fontSize: 14,
+  }
 });
