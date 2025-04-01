@@ -281,6 +281,7 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   swiperContainer: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -341,9 +342,9 @@ const styles = StyleSheet.create({
   },
   cardContainer: {
     flex: 1,
-    borderRadius: 8,
-    width: 400,
-    maxHeight: 730,
+    // borderRadius: 8,
+    // maxWidth: 400,
+    maxHeight: 715,
     alignSelf: 'center',
     bottom: 55,
     overflow: "hidden",
