@@ -1,10 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { useRoute } from '@react-navigation/native';
-import { Text, View, StyleSheet, TouchableHighlight, Image } from 'react-native';
-import { useFonts, Inter_400Regular, Inter_600SemiBold } from '@expo-google-fonts/inter';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '../../../supabase';
+import React, { useState, useEffect } from "react";
+import { useRoute } from "@react-navigation/native";
+import {
+  Text,
+  View,
+  StyleSheet,
+  TouchableHighlight,
+  Image,
+} from "react-native";
+import {
+  useFonts,
+  Inter_400Regular,
+  Inter_600SemiBold,
+} from "@expo-google-fonts/inter";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import { supabase } from "../../../../supabase";
 
 type ActivityLog = {
   id: string;
@@ -25,7 +35,7 @@ type RouteParams = {
 
 export default function OptionsScreen({ navigation }) {
   const route = useRoute();
-  const { spotifyID, username } = route.params as RouteParams || {};
+  const { spotifyID, username } = (route.params as RouteParams) || {};
 
   const [selectedMode, setSelectedMode] = useState<string | null>(null);
 
@@ -62,9 +72,9 @@ export default function OptionsScreen({ navigation }) {
       .single();
 
     if (error) {
-     console.error("Error fetching user:", error.message);
+      console.error("Error fetching user:", error.message);
     } else {
-     console.log("Fetched activity log:", data.activityLog);
+      console.log("Fetched activity log:", data.activityLog);
     }
 
     const existingLogs = data?.activityLog || [];
@@ -85,7 +95,7 @@ export default function OptionsScreen({ navigation }) {
     const { error: updatedError } = await supabase
       .from("User")
       .update({ activityLog: updatedLogs })
-      .eq("spotifyID", spotifyID)
+      .eq("spotifyID", spotifyID);
 
     if (updatedError) {
       console.error("Error updating activity log:", updatedError.message);
@@ -99,7 +109,6 @@ export default function OptionsScreen({ navigation }) {
     }
   };
 
-
   const [fontsLoaded] = useFonts({
     Inter_400Regular, // Regular Weight
     Inter_600SemiBold, // Extra Bold Weight
@@ -111,29 +120,29 @@ export default function OptionsScreen({ navigation }) {
       <View style={styles.container}>
         <Text>Loading...</Text>
       </View>
-    )
+    );
   }
 
   const onPressSongs = () => {
     handleSelection("songs");
     // navigation.navigate("Loading");
-    console.log('You selected Songs!');
+    console.log("You selected Songs!");
   };
 
   const onPressArtists = () => {
     handleSelection("artists");
     // navigation.navigate("Loading");
-    console.log('You selected Artists!');
+    console.log("You selected Artists!");
   };
 
   const onPressGenres = () => {
     handleSelection("genres");
     // navigation.navigate("Loading");
-    console.log('You selected Genres!');
+    console.log("You selected Genres!");
   };
 
   const onPressHelp = () => {
-    console.log('You selected Instructions!');
+    console.log("You selected Instructions!");
   };
 
   return (
@@ -144,23 +153,28 @@ export default function OptionsScreen({ navigation }) {
         <View style={styles.rowContainer}>
           {/* Contains a 'Welcome' text with the User's name */}
           <View style={styles.userGreeting}>
-             <Text style={styles.text}>Welcome,</Text>
+            <Text style={styles.text}>Welcome,</Text>
             {/* <Text style={styles.usersName}>User</Text> */}
-             <Text style={styles.usersName}>{username || 'User'}</Text>
+            <Text style={styles.usersName}>{username || "User"}</Text>
           </View>
           {/* Contains a gradient outline around the user's profile picture */}
           <View style={styles.profileContainer}>
             <LinearGradient
-              colors={['rgba(131, 56, 236, 0.9)',
-                       'rgba(255, 0, 110, 0.9)',
-                       'rgba(58, 134, 255, 0.9)',
-                       'rgba(152, 245, 225, 0.9)']}
+              colors={[
+                "rgba(131, 56, 236, 0.9)",
+                "rgba(255, 0, 110, 0.9)",
+                "rgba(58, 134, 255, 0.9)",
+                "rgba(152, 245, 225, 0.9)",
+              ]}
               style={styles.gradient}
               start={{ x: 0, y: 0.5 }}
               end={{ x: 1, y: 0.5 }}
               locations={[0, 0.3, 0.58, 1]}
             >
-              <Image source={require('../../../assets/images/default-profile-picture.png')} style={styles.userPicture} />
+              <Image
+                source={require("../../../assets/images/default-profile-picture.png")}
+                style={styles.userPicture}
+              />
             </LinearGradient>
           </View>
         </View>
@@ -171,59 +185,111 @@ export default function OptionsScreen({ navigation }) {
         <View style={styles.rowContainer}>
           <Text style={styles.selectText}>Select Your Choice:</Text>
           {/* Help Icon to give users guidance */}
-          <TouchableHighlight onPress={onPressHelp} style={styles.helpButton} underlayColor='transparent'>
-            <Ionicons name="help-circle-outline" size={24} color='black' />
+          <TouchableHighlight
+            onPress={onPressHelp}
+            style={styles.helpButton}
+            underlayColor="transparent"
+          >
+            <Ionicons name="help-circle-outline" size={24} color="black" />
           </TouchableHighlight>
         </View>
         {/* Songs Button */}
-        <TouchableHighlight style={styles.button} onPress={onPressSongs} underlayColor='#70A7FF'>
+        <TouchableHighlight
+          style={styles.button}
+          onPress={onPressSongs}
+          underlayColor="#70A7FF"
+        >
           <LinearGradient
-            colors={['#98F5E1', '#3A86FF', '#A134BE']}
+            colors={["#98F5E1", "#3A86FF", "#A134BE"]}
             start={{ x: 0, y: 0 }} // Gradient starts from top-left
             end={{ x: 1, y: 1 }} // Gradient ends at bottom-right
             style={styles.gradientBackground}
-            locations={[ 0, 0.5, 1]}
+            locations={[0, 0.5, 1]}
           >
             <Text style={styles.buttonText}>Songs</Text>
-            <Image source={require('../../../assets/images/vinyls/TameImpalaVinyl.png')} style={styles.vinyl1} />
-            <Image source={require('../../../assets/images/vinyls/DrakeVinyl.png')} style={styles.vinyl2} />
-            <Image source={require('../../../assets/images/vinyls/ORVinyl.png')} style={styles.vinyl3} />
+            <Image
+              source={require("../../../assets/images/vinyls/TameImpalaVinyl.png")}
+              style={styles.vinyl1}
+            />
+            <Image
+              source={require("../../../assets/images/vinyls/DrakeVinyl.png")}
+              style={styles.vinyl2}
+            />
+            <Image
+              source={require("../../../assets/images/vinyls/ORVinyl.png")}
+              style={styles.vinyl3}
+            />
           </LinearGradient>
         </TouchableHighlight>
         {/* Artists Button */}
-        <TouchableHighlight style={styles.button} onPress={onPressArtists} underlayColor='#70A7FF'>
-           <LinearGradient
-            colors={['#3A86FF', '#FF1493', '#A134BE']}
+        <TouchableHighlight
+          style={styles.button}
+          onPress={onPressArtists}
+          underlayColor="#70A7FF"
+        >
+          <LinearGradient
+            colors={["#3A86FF", "#FF1493", "#A134BE"]}
             start={{ x: 0, y: 0 }} // Gradient starts from top-left
             end={{ x: 1, y: 1 }} // Gradient ends at bottom-right
             style={styles.gradientBackground}
-            locations={[ 0.1, 0.5, 1]}
+            locations={[0.1, 0.5, 1]}
           >
             <Text style={styles.artistsText}>Artists</Text>
-              <Image source={require('../../../assets/images/artists/DonToliver.png')} style={styles.artist1} />
-              <Image source={require('../../../assets/images/artists/BillieE.png')} style={styles.artist2} />
-              <Image source={require('../../../assets/images/artists/CharliXCX.png')} style={styles.artist3} />
+            <Image
+              source={require("../../../assets/images/artists/DonToliver.png")}
+              style={styles.artist1}
+            />
+            <Image
+              source={require("../../../assets/images/artists/BillieE.png")}
+              style={styles.artist2}
+            />
+            <Image
+              source={require("../../../assets/images/artists/CharliXCX.png")}
+              style={styles.artist3}
+            />
           </LinearGradient>
         </TouchableHighlight>
         {/* Genres Button */}
-        <TouchableHighlight style={styles.button} onPress={onPressGenres} underlayColor='#70A7FF'>
-           <LinearGradient
-            colors={['#FF69B4', '#FF006E', '#CF0101']}
+        <TouchableHighlight
+          style={styles.button}
+          onPress={onPressGenres}
+          underlayColor="#70A7FF"
+        >
+          <LinearGradient
+            colors={["#FF69B4", "#FF006E", "#CF0101"]}
             start={{ x: 0, y: 0 }} // Gradient starts from top-left
             end={{ x: 1, y: 1 }} // Gradient ends at bottom-right
             style={styles.gradientBackground}
-            locations={[ 0.29, 0.77, 1]}
+            locations={[0.29, 0.77, 1]}
           >
             <Text style={styles.buttonText}>Genres</Text>
-            <Image source={require('../../../assets/images/genres/Dance.png')} style={styles.genre1} />
-            <Image source={require('../../../assets/images/genres/Folk.png')} style={styles.genre2} />
-            <Image source={require('../../../assets/images/genres/Indie.png')} style={styles.genre3} />
-            <Image source={require('../../../assets/images/genres/Jazz.png')} style={styles.genre4} />
-            <Image source={require('../../../assets/images/genres/Pop.png')} style={styles.genre5} />
-            <Image source={require('../../../assets/images/genres/Rock.png')} style={styles.genre6} />
+            <Image
+              source={require("../../../assets/images/genres/Dance.png")}
+              style={styles.genre1}
+            />
+            <Image
+              source={require("../../../assets/images/genres/Folk.png")}
+              style={styles.genre2}
+            />
+            <Image
+              source={require("../../../assets/images/genres/Indie.png")}
+              style={styles.genre3}
+            />
+            <Image
+              source={require("../../../assets/images/genres/Jazz.png")}
+              style={styles.genre4}
+            />
+            <Image
+              source={require("../../../assets/images/genres/Pop.png")}
+              style={styles.genre5}
+            />
+            <Image
+              source={require("../../../assets/images/genres/Rock.png")}
+              style={styles.genre6}
+            />
           </LinearGradient>
-          </TouchableHighlight>
-        </View>
+        </TouchableHighlight>
+      </View>
     </View>
   );
 }
@@ -231,18 +297,18 @@ export default function OptionsScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#ffffff",
+    justifyContent: "center",
+    alignItems: "center",
   },
   text: {
-    color: 'black',
-    fontFamily: 'Inter_400Regular',
+    color: "black",
+    fontFamily: "Inter_400Regular",
     fontSize: 16,
   },
   selectText: {
-    color: 'black',
-    fontFamily: 'Inter_400Regular',
+    color: "black",
+    fontFamily: "Inter_400Regular",
     fontSize: 16,
     marginLeft: 12,
   },
@@ -250,27 +316,27 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   rowContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-start",
   },
   userContainer: {
     width: 385,
     height: 130,
-    alignContent: 'center',
-    justifyContent: 'space-between',
+    alignContent: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 10,
   },
   userGreeting: {
-    flexWrap: 'nowrap',
+    flexWrap: "nowrap",
     flex: 1,
   },
   usersName: {
-    color: 'black',
-    fontFamily: 'Inter_600SemiBold',
+    color: "black",
+    fontFamily: "Inter_600SemiBold",
     fontSize: 24,
     flexShrink: 1,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   profileContainer: {
     width: 75,
@@ -293,131 +359,131 @@ const styles = StyleSheet.create({
     height: 75,
     borderRadius: 75 / 2,
     borderWidth: 2,
-    borderColor: 'transparent',
-    overflow: 'hidden',
+    borderColor: "transparent",
+    overflow: "hidden",
   },
   button: {
     flexShrink: 0,
     width: 383,
     maxHeight: 153,
     borderRadius: 30,
-    justifyContent: 'center',
-    alignContent: 'center',
+    justifyContent: "center",
+    alignContent: "center",
     margin: 13,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   buttonText: {
-    color: 'black',
-    fontFamily: 'Inter_400Regular',
+    color: "black",
+    fontFamily: "Inter_400Regular",
     fontSize: 16,
     marginLeft: 58,
   },
   artistsText: {
-    color: 'black',
-    fontFamily: 'Inter_400Regular',
+    color: "black",
+    fontFamily: "Inter_400Regular",
     fontSize: 16,
     marginLeft: 273,
   },
   gradientBackground: {
-    width: 383 ,
+    width: 383,
     height: 153,
-    justifyContent: 'center',
+    justifyContent: "center",
     borderRadius: 30,
-    opacity: 0.95
+    opacity: 0.95,
   },
   vinyl1: {
     width: 104,
     height: 103,
-    position: 'absolute',
+    position: "absolute",
     left: 183,
-    resizeMode: 'contain',
+    resizeMode: "contain",
   },
   vinyl2: {
     width: 104,
     height: 103,
-    position: 'absolute',
+    position: "absolute",
     left: 235,
-    resizeMode: 'contain',
+    resizeMode: "contain",
   },
   vinyl3: {
     width: 104,
     height: 103,
-    position: 'absolute',
+    position: "absolute",
     left: 280,
-    resizeMode: 'contain',
+    resizeMode: "contain",
   },
   artist1: {
     width: 120,
     height: 140,
-    position: 'absolute',
+    position: "absolute",
     top: 23,
-    resizeMode: 'contain',
+    resizeMode: "contain",
   },
   artist2: {
     width: 115,
     height: 130,
-    position: 'absolute',
+    position: "absolute",
     top: 29,
     left: 115,
-    resizeMode: 'contain',
+    resizeMode: "contain",
   },
   artist3: {
     width: 115,
     height: 130,
-    position: 'absolute',
+    position: "absolute",
     top: 31,
     left: 62,
-    resizeMode: 'contain',
+    resizeMode: "contain",
   },
   genre1: {
     width: 50,
     height: 50,
-    position: 'absolute',
+    position: "absolute",
     top: 5,
     left: 319,
-    resizeMode: 'contain',
+    resizeMode: "contain",
   },
   genre2: {
     width: 50,
     height: 50,
-    position: 'absolute',
+    position: "absolute",
     top: 5,
     left: 208,
-    resizeMode: 'contain',
+    resizeMode: "contain",
   },
   genre3: {
     width: 50,
     height: 50,
-    position: 'absolute',
+    position: "absolute",
     top: 60,
     left: 319,
-    resizeMode: 'contain',
+    resizeMode: "contain",
   },
   genre4: {
     width: 50,
     height: 50,
-    position: 'absolute',
+    position: "absolute",
     top: 40,
     left: 255,
-    resizeMode: 'contain',
+    resizeMode: "contain",
   },
   genre5: {
     width: 50,
     height: 50,
-    position: 'absolute',
+    position: "absolute",
     top: 80,
     left: 204,
-    resizeMode: 'contain',
+    resizeMode: "contain",
   },
   genre6: {
     width: 50,
     height: 50,
-    position: 'absolute',
+    position: "absolute",
     top: 100,
     left: 280,
-    resizeMode: 'contain',
+    resizeMode: "contain",
   },
-   helpButton: {
+  helpButton: {
     marginLeft: 210,
     flexShrink: 0,
     padding: 5,

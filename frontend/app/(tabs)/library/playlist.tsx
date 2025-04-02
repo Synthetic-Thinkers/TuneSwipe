@@ -6,7 +6,7 @@ import Feather from "@expo/vector-icons/Feather";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import Entypo from "@expo/vector-icons/Entypo";
 import { Link } from "expo-router";
-import SongItem from "@/components/SongItem";
+import SongItem from "@/frontend/components/SongItem";
 import supabase from "@/app/utils/supabaseClient";
 
 export default function PlaylistScreen() {
@@ -49,23 +49,23 @@ export default function PlaylistScreen() {
         .select("*")
         .eq("id", playlistId)
         .single();
-  
+
       if (playlistError) {
         console.error("Error fetching playlist:", playlistError);
         return;
       }
       setPlaylistData(playlistData);
-  
+
       // Step 2: Extract song IDs from the playlist data
       const songIds = playlistData.songs; // Assuming `songs` is an array of song IDs
-      console.log(songIds)
+      console.log(songIds);
       if (songIds && songIds.length > 0) {
         // Step 3: Fetch the song data using the song IDs
         const { data: songsData, error: songsError } = await supabase
           .from("Song") // Replace with your actual table name
           .select("*")
           .in("id", songIds); // Fetch songs where the ID is in the songIds array
-  
+
         if (songsError) {
           console.error("Error fetching songs:", songsError);
         } else {
@@ -77,12 +77,16 @@ export default function PlaylistScreen() {
         setSongsData([]); // Clear the songs data if no songs are found
       }
     }
-  
+
     fetchPlaylistAndSongs();
   }, [playlistId]);
 
-  if(!playlistData){
-    return <View><Text>Loading...</Text></View>
+  if (!playlistData) {
+    return (
+      <View>
+        <Text>Loading...</Text>
+      </View>
+    );
   }
   return (
     <ScrollView>
@@ -114,7 +118,9 @@ export default function PlaylistScreen() {
             <Text style={{ color: "#FF006E" }}>Shuffle</Text>
           </View>
         </View>
-        <Text style={styles.playlistDescription}>{playlistData.description}</Text>
+        <Text style={styles.playlistDescription}>
+          {playlistData.description}
+        </Text>
         <View style={styles.songsContainer}>
           {songsData.map((song) => (
             <SongItem
@@ -142,7 +148,7 @@ const styles = StyleSheet.create({
     display: "flex",
     flexDirection: "row",
     justifyContent: "space-evenly",
-    padding: 10
+    padding: 10,
   },
   playlistInfoContainer: {
     display: "flex",
@@ -180,7 +186,6 @@ const styles = StyleSheet.create({
   playlistTitle: {
     fontSize: 24,
     fontWeight: 700,
-
   },
   playlistImage: {
     width: 150,
@@ -189,6 +194,6 @@ const styles = StyleSheet.create({
   },
   playlistDescription: {
     color: "#7E7E82",
-    padding: 10
-  }
+    padding: 10,
+  },
 });

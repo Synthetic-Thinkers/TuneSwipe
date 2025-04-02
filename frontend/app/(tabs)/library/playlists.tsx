@@ -11,14 +11,16 @@ import {
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { SearchBar } from "@rneui/themed";
 import { useState } from "react";
-import PlaylistItem from "@/components/PlaylistItem";
+import PlaylistItem from "@/frontend/components/PlaylistItem";
 import { Link } from "expo-router";
 import { router } from "expo-router";
 import { useLocalSearchParams } from "expo-router";
 
 export default function PlaylistsScreen() {
   const params = useLocalSearchParams();
-  const playlists = JSON.parse(Array.isArray(params.data) ? params.data[0] : params.data);
+  const playlists = JSON.parse(
+    Array.isArray(params.data) ? params.data[0] : params.data
+  );
   const [search, setSearch] = useState("");
 
   const updateSearch = (search: string) => {
