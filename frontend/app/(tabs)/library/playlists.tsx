@@ -11,7 +11,7 @@ import {
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { SearchBar } from "@rneui/themed";
 import { useState } from "react";
-import PlaylistItem from "@/frontend/components/PlaylistItem";
+import PlaylistItem from "../../../components/PlaylistItem";
 import { Link } from "expo-router";
 import { router } from "expo-router";
 import { useLocalSearchParams } from "expo-router";

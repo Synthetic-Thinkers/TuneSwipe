@@ -14,7 +14,7 @@ import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import { useReducedMotion } from "react-native-reanimated";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useRouter } from "expo-router";
-import { supabase } from "../../supabase";
+import { supabase } from "../supabase";
 
 const discovery = {
   authorizationEndpoint: process.env.EXPO_PUBLIC_AUTH_ENDPOINT,

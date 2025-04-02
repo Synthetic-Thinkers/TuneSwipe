@@ -6,8 +6,8 @@ import Feather from "@expo/vector-icons/Feather";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import Entypo from "@expo/vector-icons/Entypo";
 import { Link } from "expo-router";
-import SongItem from "@/frontend/components/SongItem";
-import supabase from "@/app/utils/supabaseClient";
+import SongItem from "../../../components/SongItem"; // Adjust the import path as necessary
+import supabase from "../../utils/supabaseClient"; // Adjust the import path as necessary
 
 export default function PlaylistScreen() {
   const { playlistId } = useLocalSearchParams(); // Retrieve the playlistId from navigation params

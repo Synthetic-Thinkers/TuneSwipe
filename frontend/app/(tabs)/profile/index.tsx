@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useEffect, useState } from "react";
-import ArtistIcon from "@/frontend/components/profileScreen/ArtistIcon";
+import ArtistIcon from "../../../components/profileScreen/ArtistIcon";
 import {
   fetchAvatarUrl,
   getStoredAvatarUrl,

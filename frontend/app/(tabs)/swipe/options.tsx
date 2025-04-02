@@ -14,7 +14,7 @@ import {
 } from "@expo-google-fonts/inter";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { supabase } from "../../../../supabase";
+import { supabase } from "../../../supabase";
 
 type ActivityLog = {
   id: string;

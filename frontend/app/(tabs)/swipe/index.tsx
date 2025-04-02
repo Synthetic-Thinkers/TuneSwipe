@@ -18,7 +18,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import { supabase } from "../../../../supabase";
+import { supabase } from "../../../supabase";
 
 export default function IndexScreen({ navigation }) {
   const [spotifyID, setSpotifyID] = useState<string | null>(null);
