@@ -1,5 +1,5 @@
 import React, { useState , useEffect, useRef} from "react";
-import { View, Text, StyleSheet, Image, TouchableOpacity} from "react-native";
+import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions, Platform} from "react-native";
 import Swiper from 'react-native-deck-swiper';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Entypo } from "@expo/vector-icons";
@@ -39,6 +39,7 @@ export default function SwipeScreen({ navigation }) {
   const [showBlur, setShowBlur] = useState(true);
   const swiperRef = useRef<Swiper<any>>(null);
 
+
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -46,6 +47,7 @@ export default function SwipeScreen({ navigation }) {
     Inter_700Bold,
     Inter_800ExtraBold,
   });
+
 
   const fetchData = async () => {
     let data;
@@ -171,14 +173,28 @@ export default function SwipeScreen({ navigation }) {
         {/* Show BlurView and Instructions when 'showBlur' is true */}
         {showBlur && (
           <>
-            <Image
-             source={firstCard.imageUrl ? { uri: firstCard.imageUrl } : require('../../../assets/images/defaultImage.png')}
-             style={styles.image}
-            />
-            <View style={styles.choiceContainer}>
-              <View style={styles.rectangle}></View>
-              <Ionicons name="close-circle-outline" size={80} style={styles.dislikeIcon} />
-              <Ionicons name="heart-circle-outline" size={80} style={styles.likeIcon} />
+            <View style={styles.startCardContainer}>
+              <Image
+               source={firstCard.imageUrl ? { uri: firstCard.imageUrl } : require('../../../assets/images/defaultImage.png')}
+               style={styles.image}
+              />
+              <View style={styles.textContainer}>
+                  {mode === 'songs' ? (
+                    <Text style={styles.songText}>
+                      {firstCard.artistID} - {firstCard.title}
+                    </Text>
+                  ) : (
+                    <Text style={styles.songText}>{firstCard.name}</Text>
+                )}
+                {mode !== 'genres' && firstCard.genres && (
+                  <Text style={styles.genreText}>{firstCard.genres.join(' + ')}</Text>
+                )}
+                </View>
+              <View style={styles.choiceContainer}>
+                <View style={styles.rectangle}></View>
+                <Ionicons name="close-circle-outline" size={80} style={styles.dislikeIcon} />
+                <Ionicons name="heart-circle-outline" size={80} style={styles.likeIcon} />
+              </View>
             </View>
             <BlurView intensity={30} style={styles.blurView} tint="light" />
             <View style={styles.instructContainer}>
@@ -191,7 +207,7 @@ export default function SwipeScreen({ navigation }) {
                 <Entypo name="arrow-left" size={80} style={styles.arrowIcon} />
                 <Entypo name="arrow-right" size={80} style={styles.arrowIcon} />
               </View>
-            </View>
+              </View>
           </>
         )}
 
@@ -202,8 +218,8 @@ export default function SwipeScreen({ navigation }) {
             renderCard={(card) => (
               <View style={styles.cardContainer}>
                 {mode === 'songs' ? (
-                  card.image ? (
-                    <Image source={{ uri: card.image }} style={styles.image} />
+                  card.imageUrl ? (
+                    <Image source={{ uri: card.imageUrl }} style={styles.image} />
                   ) : (
                     <Image source={require('../../../assets/images/defaultImage.png')} style={styles.image} />
                   )
@@ -228,7 +244,9 @@ export default function SwipeScreen({ navigation }) {
                   ) : (
                     <Text style={styles.songText}>{card.name}</Text>
                   )}
-                  <Text style={styles.genreText}>{card.genre}</Text>
+                  {mode !== 'genres' && firstCard.genres && (
+                    <Text style={styles.genreText}>{firstCard.genres.join(' + ')}</Text>
+                  )}
                 </View>
                 <View style={styles.choiceContainer}>
                   <View style={styles.rectangle}></View>
@@ -254,17 +272,37 @@ export default function SwipeScreen({ navigation }) {
             cardIndex={index}
             onSwiped={(swipeIndex) => {setIndex(swipeIndex + 1);}}
             onSwipedAll={handleSwipedAll}
-          />
+            />
         )}
+
       </View>
     </TouchableOpacity>
   );
 }
 
+const { width, height } = Dimensions.get('window');
+
+// Set a BASE height
+const BASE_HEIGHT = 715;
+
+let dynamicHeight;
+
+// If screen is on large devices, shrink it
+if (height > 896) {
+  dynamicHeight = Math.min(height * 0.7, 700);
+}
+// If screen is on small devices, shrink accordingly
+else if (height < 896) {
+  dynamicHeight = Math.min(height * 0.84, 620);
+}
+// Otherwise, keep the default height
+else {
+  dynamicHeight = BASE_HEIGHT;
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffff',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -284,6 +322,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    alignSelf: "center",
+    backgroundColor: 'transparent',
   },
   blurView: {
     position: 'absolute',
@@ -316,9 +356,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   instructContainer: {
-    top: 320,
     position: "absolute",
-    alignItems:'center',
+    alignItems: 'center',
   },
   songText: {
     fontFamily: 'Inter_600SemiBold',
@@ -334,32 +373,52 @@ const styles = StyleSheet.create({
     padding: 2,
     borderRadius: 12,
   },
+    cardContainer: {
+    borderRadius: 8,
+    width: Math.min(width * 0.91, 377), // Keeps width consistent
+    height: dynamicHeight, // Ensures card is not too tall
+    bottom: Math.min(height * 0.06, 55),
+    alignSelf: 'center',
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: Platform.OS === 'android' ? 5 : 0, // Android shadow fix
+  },
+  startCardContainer: {
+    borderRadius: 8,
+    width: Math.min(width * 0.91, 377), // Keeps width consistent
+    height: dynamicHeight, // Ensures card is not too tall
+    bottom: Math.min(height * 0.06, 55),
+    alignSelf: 'center',
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: Platform.OS === 'android' ? 5 : 0, // Android shadow fix
+    position: 'fixed',
+    top: 1,
+  },
   image: {
     borderRadius: 8,
     flex: 1,
-    width: 400,
+    resizeMode: 'cover',
+    width: 377,
     maxHeight: 715,
-  },
-  cardContainer: {
-    flex: 1,
-    // borderRadius: 8,
-    // maxWidth: 400,
-    maxHeight: 715,
-    alignSelf: 'center',
-    bottom: 55,
-    overflow: "hidden",
   },
   textContainer: {
     position: 'absolute',
-    top: 570,
+    bottom: 83 + 10,
   },
   choiceContainer: {
-    width: 400,
+    width: 377,
     height: 83,
     borderBottomLeftRadius: 8,
     borderBottomRightRadius: 8,
     position: 'absolute',
-    top: 632,
+    bottom: 0,
   },
   rectangle: {
     backgroundColor: 'black',
