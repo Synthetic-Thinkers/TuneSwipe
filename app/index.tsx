@@ -13,8 +13,6 @@ const discovery = {
 	tokenEndpoint: process.env.EXPO_PUBLIC_TOKEN_ENDPOINT,
 };
 
-let successfulAuth = false;
-
 export default function login() {
 	const backgroundImage = require('../assets/images/TuneSwipe_Background.png');
 	const logo = require('../assets/images/TuneSwipe_Logo.png');
@@ -26,7 +24,7 @@ export default function login() {
 		setIOpen(true);
 	}, []);
 	const snapPoints = ["30%"];
-
+	console.log(process.env.EXPO_PUBLIC_REDIRECT_URL)
 	const [request, response, promptAsync] = Auth.useAuthRequest(
 	{
 		responseType: Auth.ResponseType.Token,
@@ -48,35 +46,43 @@ export default function login() {
 	discovery
 );
 
-useEffect (() => {
-	if(response?.type == "success") {
-		const {access_token}= response.params;
-		console.log('accessToken -> ', access_token);
-    	successfulAuth = true;
-		getUser(access_token);
-    	router.replace("/(tabs)/library")
-	}
-	else if (response?.type == "error") {
+useEffect(() => {
+	const handleAuth = async () => {
+	  if (response?.type === "success") {
+		try {
+		  const { access_token } = response.params;
+		  await AsyncStorage.setItem("accessToken", access_token);
+		  console.log("accessToken -> ", access_token);
+  
+		  getUser(access_token);
+		  router.replace("/(tabs)/library");
+		} catch (error) {
+		  console.error("Error storing access token:", error);
+		}
+	  } else if (response?.type === "error") {
 		console.error("Auth error ->", response.error);
-	}
-	else {
+	  } else {
 		console.log("Waiting for Spotify Auth");
-	}
-}, [response]);
+	  }
+	};
+  
+	handleAuth(); // Call the async function inside useEffect
+  
+  }, [response]); // Ensure `response` is listed in dependencies
 
 const getUser = async (token: string) => {
 	console.log("-- From getUser --");
 	try{
 		const resultFromCall = await fetch(process.env.EXPO_PUBLIC_USER_DOMAIN ?? " ", {
 			method: "GET",
-			headers: { 
+			headers: {
 				Authorization: `Bearer ${token}`,
 				"Content-Type": "application/json",
 			},
 		});
 		const jsonData = await resultFromCall.json();
 		const spotifyID = jsonData.id;
-		console.log("Signed in user spotifyID: ", spotifyID);
+		console.log("Signed in user UserID: ", spotifyID);
 
 		if (!spotifyID){
 			console.error("Error - Could not get Spotify ID");
@@ -89,10 +95,10 @@ const getUser = async (token: string) => {
 			.select('*')
 			.eq('spotifyID', spotifyID)
 			.single();
-		
+
 		if (User) {
-			console.log("User already exists in User table.");
-		} 
+			console.log("User already exists in Supabase.");
+		}
 		else {
 			// Insert new user
 			const { data, error: insertError } = await supabase
@@ -101,16 +107,17 @@ const getUser = async (token: string) => {
     				{ spotifyID: spotifyID},
   				])
   				.select()
-			
+
 			if (insertError) {
 				console.error("ERROR - Could not insert user:", insertError.message);
 			}
 			else {
-				console.log("New user added to User table!");
+				console.log("New user added to Supabase!");
 			}
-		}
-		await getTopArtists(token, spotifyID);
-		
+    }
+    // Store the spotifyID in AsyncStorage
+    await AsyncStorage.setItem("spotifyID", spotifyID);
+
 	} catch (error) {
 		console.error("ERROR - Could not get user.")
 	}

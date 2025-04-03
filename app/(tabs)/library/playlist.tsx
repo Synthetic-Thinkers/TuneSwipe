@@ -11,79 +11,95 @@ import supabase from "@/app/utils/supabaseClient";
 
 export default function PlaylistScreen() {
   const { playlistId } = useLocalSearchParams(); // Retrieve the playlistId from navigation params
+
   interface Playlist {
     id: number;
     name: string;
     description: string;
     image: string;
     songs: number[];
-    timeCreated: string;
-    createdBy: number;
+    createdBy: any;
   }
 
   const [playlistData, setPlaylistData] = useState<Playlist | null>(null);
   const [songsData, setSongsData] = useState<any[]>([]);
-  // useEffect(() => {
-  //   async function fetchPlaylist() {
-  //     const { data, error } = await supabase
-  //       .from("Playlist")
-  //       .select("*")
-  //       .eq("id", playlistId)
-  //       .single();
+  const [artistData, setArtistData] = useState<any[]>([]);
 
-  //     if (error) {
-  //       console.error("Error fetching playlist:", error);
-  //     } else {
-  //       setPlaylistData(data);
-  //       console.log("Fetched playlist:", data);
-  //     }
-  //   }
+  const deleteSong = async (id: number) => {
+    const updatedSongs = playlistData?.songs.filter(
+      (songID: number) => songID !== id
+    );
+    console.log("Updated songs", updatedSongs);
+    const { error } = await supabase
+      .from("Playlist")
+      .update({ songs: updatedSongs })
+      .eq("id", playlistData?.id);
 
-  //   fetchPlaylist();
-  // }, [playlistId]);
+    if (error) {
+      console.error("Error deleting song:", error);
+    } else {
+      console.log("Song deleted successfully");
+      // Update the local state to reflect the changes
+      setPlaylistData({ ...playlistData, songs: updatedSongs } as Playlist);
+      setSongsData(songsData.filter((song) => song.id !== id)); // Update songsData state
+    }
+  };
+
   useEffect(() => {
-    async function fetchPlaylistAndSongs() {
+    async function fetchData() {
       // Step 1: Fetch the playlist data
       const { data: playlistData, error: playlistError } = await supabase
         .from("Playlist")
         .select("*")
         .eq("id", playlistId)
         .single();
-  
+
       if (playlistError) {
         console.error("Error fetching playlist:", playlistError);
         return;
       }
       setPlaylistData(playlistData);
-  
+
       // Step 2: Extract song IDs from the playlist data
       const songIds = playlistData.songs; // Assuming `songs` is an array of song IDs
-      console.log(songIds)
-      if (songIds && songIds.length > 0) {
-        // Step 3: Fetch the song data using the song IDs
-        const { data: songsData, error: songsError } = await supabase
-          .from("Song") // Replace with your actual table name
-          .select("*")
-          .in("id", songIds); // Fetch songs where the ID is in the songIds array
-  
-        if (songsError) {
-          console.error("Error fetching songs:", songsError);
-        } else {
-          console.log("Fetched songs:", songsData);
-          setSongsData(songsData); // Assuming you have a state to store songs data
-        }
+
+      // Step 3: Fetch the song data using the song IDs
+      const { data: songsData, error: songsError } = await supabase
+        .from("Song") // Replace with your actual table name
+        .select("*")
+        .in("id", songIds); // Fetch songs where the ID is in the songIds array
+
+      if (songsError) {
+        console.error("Error fetching songs:", songsError);
       } else {
-        console.log("No songs found in the playlist.");
-        setSongsData([]); // Clear the songs data if no songs are found
+        console.log("Fetched songs:", songsData);
+        setSongsData(songsData); // Assuming you have a state to store songs data
+      }
+
+      const artistIDs = songsData?.map((song: any) => song.artistID) || [];
+      const { data: artistData, error } = await supabase
+        .from("Artist")
+        .select("*")
+        .in("id", artistIDs);
+
+      if (error) {
+        console.error("Error fetching artist data:", error);
+      } else {
+        setArtistData(artistData);
       }
     }
-  
-    fetchPlaylistAndSongs();
+
+    fetchData();
   }, [playlistId]);
 
-  if(!playlistData){
-    return <View><Text>Loading...</Text></View>
+  if (!playlistData) {
+    return (
+      <View>
+        <Text>Loading...</Text>
+      </View>
+    );
   }
+
   return (
     <ScrollView>
       <View style={{ padding: 16 }}>
@@ -114,16 +130,23 @@ export default function PlaylistScreen() {
             <Text style={{ color: "#FF006E" }}>Shuffle</Text>
           </View>
         </View>
-        <Text style={styles.playlistDescription}>{playlistData.description}</Text>
+        <Text style={styles.playlistDescription}>
+          {playlistData.description}
+        </Text>
         <View style={styles.songsContainer}>
-          {songsData.map((song) => (
-            <SongItem
-              key={song.id}
-              name={song.title} // Replace with actual song name from fetched data
-              artist={song.artistID} // Replace with actual artist name from fetched data
-              imageUri="https://i.pinimg.com/736x/25/98/2c/25982c2af2cca84c831a37dedfd15c66.jpg" // Replace with actual song image from fetched data
-            />
-          ))}
+          {songsData.map((song) => {
+            const artist = artistData.find(
+              (artist) => artist.id === song.artistID
+            );
+            return (
+              <SongItem
+                key={song.id}
+                data={song}
+                onDelete={() => deleteSong(song.id)}
+                artistName={artist ? artist.name : "Unknown Artist"} // Handle undefined case
+              />
+            );
+          })}
         </View>
       </View>
     </ScrollView>
@@ -142,7 +165,7 @@ const styles = StyleSheet.create({
     display: "flex",
     flexDirection: "row",
     justifyContent: "space-evenly",
-    padding: 10
+    padding: 10,
   },
   playlistInfoContainer: {
     display: "flex",
@@ -180,7 +203,6 @@ const styles = StyleSheet.create({
   playlistTitle: {
     fontSize: 24,
     fontWeight: 700,
-
   },
   playlistImage: {
     width: 150,
@@ -189,6 +211,6 @@ const styles = StyleSheet.create({
   },
   playlistDescription: {
     color: "#7E7E82",
-    padding: 10
-  }
+    padding: 10,
+  },
 });
