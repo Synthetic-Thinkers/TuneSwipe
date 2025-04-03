@@ -69,24 +69,24 @@ export default function PlaylistScreen() {
         .select("*")
         .in("id", songIds); // Fetch songs where the ID is in the songIds array
 
-      if (songsError) {
-        console.error("Error fetching songs:", songsError);
-      } else {
-        console.log("Fetched songs:", songsData);
-        setSongsData(songsData); // Assuming you have a state to store songs data
-      }
+      const artistIDs = songsData?.flatMap((song: any) => song.artistsID);
+      // // Remove duplicates (optional)
+      const uniqueArtistIDs = [...new Set(artistIDs)];
 
-      const artistIDs = songsData?.map((song: any) => song.artistID) || [];
-      const { data: artistData, error } = await supabase
+      const { data: artistData } = await supabase
         .from("Artist")
         .select("*")
-        .in("id", artistIDs);
+        .in("spotifyID", uniqueArtistIDs);
 
-      if (error) {
-        console.error("Error fetching artist data:", error);
-      } else {
-        setArtistData(artistData);
-      }
+      const songDataWithArtistNames = songsData?.map((song) => {
+        const artistsName = song.artistsID.map((artistID: any) => {
+          return artistData?.find((artist) => artist.spotifyID === artistID)
+            ?.name;
+        });
+        console.log(artistsName);
+        return { ...song, artistsName };
+      });
+      setSongsData(songDataWithArtistNames ? songDataWithArtistNames : []);
     }
 
     fetchData();
@@ -135,15 +135,11 @@ export default function PlaylistScreen() {
         </Text>
         <View style={styles.songsContainer}>
           {songsData.map((song) => {
-            const artist = artistData.find(
-              (artist) => artist.id === song.artistID
-            );
             return (
               <SongItem
                 key={song.id}
                 data={song}
                 onDelete={() => deleteSong(song.id)}
-                artistName={artist ? artist.name : "Unknown Artist"} // Handle undefined case
               />
             );
           })}
