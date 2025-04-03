@@ -12,8 +12,6 @@ import { useEffect, useState, useContext, createContext } from "react";
 import ArtistIcon from "@/components/profileScreen/ArtistIcon";
 import {
   fetchAvatarUrl,
-  getStoredAvatarUrl,
-  storeAvatarUrl,
   uploadAvatar,
   convertImageToPNG,
 } from "../../utils/avatarsUtils"; // Import the utility functions
@@ -28,6 +26,7 @@ import * as ImagePicker from "expo-image-picker";
 import supabase from "@/app/utils/supabaseClient";
 import { Link, router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { fetchTracks, fetchUser } from "../../utils/spotifyUtils";
 
 export default function ProfileScreen() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -41,14 +40,8 @@ export default function ProfileScreen() {
     async function fetchData() {
       try {
         const storedId = await AsyncStorage.getItem("spotifyID");
+        const storedAccessToken = await AsyncStorage.getItem("accessToken");
 
-        // Check if storedId is null or undefined
-        if (!storedId) {
-          console.error("No stored Spotify ID found.");
-          setLoading(false);
-          return;
-        }
-    
         const { data: userData, error: userError } = await supabase
           .from("User")
           .select("*")
@@ -57,8 +50,7 @@ export default function ProfileScreen() {
 
         if (userError) {
           throw userError;
-        } 
-        else {
+        } else {
           setUser(userData);
           console.log(userData);
         }
@@ -91,9 +83,33 @@ export default function ProfileScreen() {
         }
 
         // Fetch the avatar URL from Supabase
-        const url = await fetchAvatarUrl(userData.id);
+        const url = userData.avatarURL;
         if (url) {
+          console.log("Avatar URL:", url);
           setAvatarUrl(url);
+        }
+        // First time user trying fetching profile picture from spotify instead
+        else {
+          const userData: any = await fetchUser();
+          if (userData !== null) {
+            const profileImageUrl =
+              userData.images?.length > 0 ? userData.images[0].url : null;
+            setAvatarUrl(profileImageUrl);
+            await supabase
+              .from("User")
+              .update({ avatarURL: profileImageUrl })
+              .eq("spotifyID", storedId); 
+          }
+          else{ //No profile image found, set default image
+            const defaultImageUrl =
+              "https://ierqhxlamotfahrwcsdz.supabase.co/storage/v1/object/public/" +
+              "avatars/default.png";
+            setAvatarUrl(defaultImageUrl);
+            await supabase
+              .from("User")
+              .update({ avatarURL: defaultImageUrl })
+              .eq("spotifyID", storedId); 
+          }
         }
       } catch (error) {
         console.error("Error fetching data:", error);
