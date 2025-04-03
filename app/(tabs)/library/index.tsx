@@ -45,7 +45,7 @@ export default function LibraryScreen() {
         console.error("Error fetching data:", playlistError);
       } else {
         setPlaylists(playlistData);
-        console.log("Fetched data:", playlistData);
+        console.log("Library: Fetched playlists - ", playlistData);
       }
     }
 

@@ -34,7 +34,6 @@ export default function ProfileScreen() {
   const [isPressed, setIsPressed] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [artistData, setArtistData] = useState<any[]>([]);
-  const [songData, setSongData] = useState<any[]>([]);
 
   useEffect(() => {
     async function fetchData() {
@@ -52,7 +51,6 @@ export default function ProfileScreen() {
           throw userError;
         } else {
           setUser(userData);
-          console.log(userData);
         }
 
         //Fetch all artist data related to a user's liked and disliked artists
@@ -69,23 +67,11 @@ export default function ProfileScreen() {
         } else {
           setArtistData(artistData);
         }
-
-        //Fetch all song data from a user's liked and disliked songs
-        const songIDs = [...userData.likedSongs, ...userData.dislikedSongs];
-        const { data: songData, error: songError } = await supabase
-          .from("Song")
-          .select("*")
-          .in("id", songIDs);
-        if (songError) {
-          throw songError;
-        } else {
-          setSongData(songData);
-        }
+        console.log("Profile: Fetched artists - ", artistData);
 
         // Fetch the avatar URL from Supabase
         const url = userData.avatarURL;
         if (url) {
-          console.log("Avatar URL:", url);
           setAvatarUrl(url);
         }
         // First time user trying fetching profile picture from spotify instead
@@ -262,7 +248,6 @@ export default function ProfileScreen() {
               href={{
                 pathname: "/profile/likedSongs",
                 params: {
-                  songData: JSON.stringify(songData),
                   user: JSON.stringify(user),
                 },
               }}
@@ -283,7 +268,6 @@ export default function ProfileScreen() {
               href={{
                 pathname: "/profile/dislikedSongs",
                 params: {
-                  songData: JSON.stringify(songData),
                   user: JSON.stringify(user),
                 },
               }}

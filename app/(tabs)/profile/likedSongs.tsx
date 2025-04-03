@@ -10,33 +10,45 @@ import supabase from "../../utils/supabaseClient";
 import SongItem from "@/components/SongItem";
 
 export default function likedSongs() {
-  const { user: userString, songData: songDataString } =
-    useLocalSearchParams() as { user: string; songData: string };
+  const { user: userString } = useLocalSearchParams() as { user: string };
 
   const [search, setSearch] = useState("");
   const [user, setUser] = useState(JSON.parse(userString));
-  const [songData, setSongData] = useState(JSON.parse(songDataString));
-  const [artistData, setArtistData] = useState<any[]>([]);
+  const [songData, setSongData] = useState<any[]>([]);
 
-  //Fetch associated artist data for all liked songs
   useEffect(() => {
-    const fetchArtistData = async () => {
-      const artistIDs = songData.map((song: any) => song.artistID);
-      console.log(artistIDs);
-      const { data, error } = await supabase
+    const fetchLikedSongs = async () => {
+      //Fetch all disliked songs
+      const { data: songData } = await supabase
+        .from("Song")
+        .select("*")
+        .in("id", user.likedSongs);
+
+      console.log("Disliked Songs: ", songData);
+
+      const artistIDs = songData?.flatMap((song: any) => song.artistsID);
+      // // Remove duplicates (optional)
+      const uniqueArtistIDs = [...new Set(artistIDs)];
+
+      console.log("Disliked Song Screen: - Artist Ids", uniqueArtistIDs);
+
+      const { data: artistData } = await supabase
         .from("Artist")
         .select("*")
-        .in("id", artistIDs);
+        .in("spotifyID", uniqueArtistIDs);
 
-      if (error) {
-        console.error("Error fetching artist data:", error);
-      } else {
-        console.log("Data", data);
-        setArtistData(data)
-      }
+      const songDataWithArtistNames = songData?.map((song) => {
+        const artistsName = song.artistsID.map((artistID:any)=> {
+          return artistData?.find((artist) => artist.spotifyID === artistID)
+            ?.name;
+        });
+        console.log(artistsName);
+        return { ...song, artistsName };
+      });
+      setSongData(songDataWithArtistNames ? songDataWithArtistNames : []);
     };
 
-    fetchArtistData();
+    fetchLikedSongs();
   }, []);
 
   const updateSearch = (search: string) => {
@@ -84,22 +96,15 @@ export default function likedSongs() {
           value={search}
           containerStyle={{ flex: 1, borderRadius: 15 }}
         />
-        <View style={styles.songContainer}>
-          {user.likedSongs.map((songID: number) => {
-            const song = songData.find((song: any) => song.id === songID);
-            const artist = artistData.find(
-              (artist) => artist.id === song.artistID
-            );
-            return (
-              <SongItem
-                key={song.id}
-                data={song}
-                onDelete={() => deleteLikedSong(songID)}
-                artistName={artist ? artist.name : "Unknown Artist"} // Handle undefined case
-              />
-            );
-          })}
-        </View>
+        <View style={styles.songContainer}>{songData.map(song => {
+          return (
+            <SongItem
+              key={song.id}
+              data={song}
+              onDelete={() => deleteLikedSong(song.id)}
+            />
+          );
+        })}</View>
       </View>
     </ScrollView>
   );
