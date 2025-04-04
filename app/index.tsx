@@ -72,6 +72,7 @@ useEffect(() => {
 
 const getUser = async (token: string) => {
 	console.log("-- From getUser --");
+
 	try{
 		const resultFromCall = await fetch(process.env.EXPO_PUBLIC_USER_DOMAIN ?? " ", {
 			method: "GET",
@@ -117,6 +118,7 @@ const getUser = async (token: string) => {
     }
     // Store the spotifyID in AsyncStorage
     await AsyncStorage.setItem("spotifyID", spotifyID);
+	getTopArtists(token, spotifyID)
 
 	} catch (error) {
 		console.error("ERROR - Could not get user.")
@@ -137,8 +139,8 @@ const getTopArtists = async (token: string, sID: string) => {
 			},
 		});
 		const jsonData = await resultFromCall.json();
-		const artists = jsonData.items.map((artist: { name: any; }) => artist.name);
-		console.log("Top 10 artists:", artists);
+		const artistsID = jsonData.items.map((artistID: { id: any; }) => artistID.id);
+		console.log("Top 10 artists:", artistsID);
 		console.log("SpotifyID from getTopArtist: ", sID);
 
 		// Get users top genres. Genres are pull from the same API as top artists. The genres are those of the artists.
@@ -150,7 +152,7 @@ const getTopArtists = async (token: string, sID: string) => {
 		//Update User table
 		const{data, error} = await supabase
 			.from('User')
-			.update({ top10Artists: artists, topGenres: allGenres })
+			.update({ top10Artists: artistsID, topGenres: allGenres })
 			.eq('spotifyID', sID)
 			.select();
 		
@@ -179,14 +181,14 @@ const getTopTracks = async (token: string, sID: string) => {
 			},
 		});
 		const jsonData = await resultFromCall.json();
-		const tracks = jsonData.items.map((track: { name: any; }) => track.name);
-		console.log("Top 10 tracks:", tracks);
+		const tracksID = jsonData.items.map((trackID: { id: any; }) => trackID.id);
+		console.log("Top 10 tracks:", tracksID);
 		console.log("SpotifyID from getTopTracks: ", sID);
 		
 		//Update User table
 		const{data, error} = await supabase
 			.from('User')
-			.update({ top10Tracks: tracks })
+			.update({ top10Tracks: tracksID })
 			.eq('spotifyID', sID)
 			.select();
 		
@@ -215,13 +217,13 @@ const getRecentTracks = async (token: string, sID: string) => {
 			},
 		});
 		const jsonData = await resultFromCall.json();
-		const recentTracks = jsonData.items.map((item: {track: any; name: any; }) => item.track.name);
-		console.log("Top 20 recently played tracks:", recentTracks);
+		const recentTracksID = jsonData.items.map((item: {track: any; id: any; }) => item.track.id);
+		console.log("Top 20 recently played tracks:", recentTracksID);
 		
 		//Update User table
 		const{data, error} = await supabase
 			.from('User')
-			.update({ recentlyPlayed: recentTracks })
+			.update({ recentlyPlayed: recentTracksID })
 			.eq('spotifyID', sID)
 			.select();
 		
