@@ -6,7 +6,7 @@ import {
   ImageManipulator,
 } from "expo-image-manipulator";
 
-export const convertImageToPNG = async (imageUri: any) => {
+export const convertImageToPNG = async (imageUri) => {
   try {
     const context = ImageManipulator.manipulate(imageUri);
     const image = await context.renderAsync();
@@ -29,25 +29,6 @@ export const fetchAvatarUrl = async (userId) => {
   return imageUrl;
 };
 
-// Store the avatar URL in AsyncStorage
-export const storeAvatarUrl = async (userId, avatarUrl) => {
-  try {
-    await AsyncStorage.setItem(`avatarUrl-${userId}`, avatarUrl);
-  } catch (error) {
-    console.error("Error storing avatar URL:", error);
-  }
-};
-
-// Retrieve the avatar URL from AsyncStorage
-export const getStoredAvatarUrl = async (userId) => {
-  try {
-    return await AsyncStorage.getItem(`avatarUrl-${userId}`);
-  } catch (error) {
-    console.error("Error retrieving avatar URL:", error);
-    return null;
-  }
-};
-
 export const uploadAvatar = async (userId, file) => {
   try {
     // Generate a unique file name
@@ -66,7 +47,14 @@ export const uploadAvatar = async (userId, file) => {
       return null;
     }
 
-    console.log("Avatar uploaded successfully:", data);
+    //Store avatar URL for respective user
+    const avatarURL = "https://ierqhxlamotfahrwcsdz.supabase.co/storage/v1/object/public/avatars/" + data.path;
+    console.log("Avatar uploaded successfully:", avatarURL);
+    const { data: userData, error: userError } = await supabase
+      .from('User')
+      .update({ avatarURL: avatarURL }) 
+      .eq('id', userId); 
+
     return data;
   } catch (error) {
     console.error("Error in uploadAvatar:", error);
@@ -74,3 +62,13 @@ export const uploadAvatar = async (userId, file) => {
   }
 };
 
+
+
+const avatarUtils = {
+  convertImageToPNG,
+  fetchAvatarUrl,
+  uploadAvatar,
+
+};
+
+export default avatarUtils;

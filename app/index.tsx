@@ -13,8 +13,6 @@ const discovery = {
 	tokenEndpoint: process.env.EXPO_PUBLIC_TOKEN_ENDPOINT,
 };
 
-let successfulAuth = false;
-
 export default function login() {
 	const backgroundImage = require('../assets/images/TuneSwipe_Background.png');
 	const logo = require('../assets/images/TuneSwipe_Logo.png');
@@ -26,7 +24,7 @@ export default function login() {
 		setIOpen(true);
 	}, []);
 	const snapPoints = ["30%"];
-
+	console.log(process.env.EXPO_PUBLIC_REDIRECT_URL)
 	const [request, response, promptAsync] = Auth.useAuthRequest(
 	{
 		responseType: Auth.ResponseType.Token,
@@ -48,6 +46,7 @@ export default function login() {
 	discovery
 );
 
+
 useEffect (() => {
 	const handleAuth = async () => {
 	  if (response?.type === "success") {
@@ -55,7 +54,6 @@ useEffect (() => {
 		  const { access_token } = response.params;
 		  await AsyncStorage.setItem("accessToken", access_token);
 		  console.log("accessToken -> ", access_token);
-
 		  getUser(access_token);
 		  router.replace("/(tabs)/library");
 		} catch (error) {
@@ -67,13 +65,12 @@ useEffect (() => {
 		console.log("Waiting for Spotify Auth");
 	  }
 	};
-
-	handleAuth(); // Call the async function inside useEffect
-
+    handleAuth(); // Call the async function inside useEffect
   }, [response]); // Ensure `response` is listed in dependencies
 
 const getUser = async (token: string) => {
 	console.log("-- From getUser --");
+
 	try{
 		const resultFromCall = await fetch(process.env.EXPO_PUBLIC_USER_DOMAIN ?? " ", {
 			method: "GET",
@@ -84,7 +81,7 @@ const getUser = async (token: string) => {
 		});
 		const jsonData = await resultFromCall.json();
 		const spotifyID = jsonData.id;
-		console.log("Signed in user spotifyID: ", spotifyID);
+		console.log("Signed in user UserID: ", spotifyID);
 
 		if (!spotifyID){
 			console.error("Error - Could not get Spotify ID");
@@ -99,7 +96,7 @@ const getUser = async (token: string) => {
 			.single();
 
 		if (User) {
-			console.log("User already exists in User table.");
+			console.log("User already exists in Supabase.");
 		}
 		else {
 			// Insert new user
@@ -114,12 +111,13 @@ const getUser = async (token: string) => {
 				console.error("ERROR - Could not insert user:", insertError.message);
 			}
 			else {
-				console.log("New user added to User table!");
+				console.log("New user added to Supabase!");
 			}
-		}
-    await getTopArtists(token, spotifyID);
+
+    }
     // Store the spotifyID in AsyncStorage
     await AsyncStorage.setItem("spotifyID", spotifyID);
+    getTopArtists(token, spotifyID)
 
 	} catch (error) {
 		console.error("ERROR - Could not get user.")
@@ -140,8 +138,8 @@ const getTopArtists = async (token: string, sID: string) => {
 			},
 		});
 		const jsonData = await resultFromCall.json();
-		const artists = jsonData.items.map((artist: { name: any; }) => artist.name);
-		console.log("Top 10 artists:", artists);
+		const artistsID = jsonData.items.map((artistID: { id: any; }) => artistID.id);
+		console.log("Top 10 artists:", artistsID);
 		console.log("SpotifyID from getTopArtist: ", sID);
 
 		// Get users top genres. Genres are pull from the same API as top artists. The genres are those of the artists.
@@ -153,7 +151,7 @@ const getTopArtists = async (token: string, sID: string) => {
 		//Update User table
 		const{data, error} = await supabase
 			.from('User')
-			.update({ top10Artists: artists, topGenres: allGenres })
+			.update({ top10Artists: artistsID, topGenres: allGenres })
 			.eq('spotifyID', sID)
 			.select();
 
@@ -182,14 +180,14 @@ const getTopTracks = async (token: string, sID: string) => {
 			},
 		});
 		const jsonData = await resultFromCall.json();
-		const tracks = jsonData.items.map((track: { name: any; }) => track.name);
-		console.log("Top 10 tracks:", tracks);
+		const tracksID = jsonData.items.map((trackID: { id: any; }) => trackID.id);
+		console.log("Top 10 tracks:", tracksID);
 		console.log("SpotifyID from getTopTracks: ", sID);
 
 		//Update User table
 		const{data, error} = await supabase
 			.from('User')
-			.update({ top10Tracks: tracks })
+			.update({ top10Tracks: tracksID })
 			.eq('spotifyID', sID)
 			.select();
 
@@ -218,13 +216,14 @@ const getRecentTracks = async (token: string, sID: string) => {
 			},
 		});
 		const jsonData = await resultFromCall.json();
-		const recentTracks = jsonData.items.map((item: {track: any; name: any; }) => item.track.name);
-		console.log("Top 20 recently played tracks:", recentTracks);
 
+		const recentTracksID = jsonData.items.map((item: {track: any; id: any; }) => item.track.id);
+		console.log("Top 20 recently played tracks:", recentTracksID);
+		
 		//Update User table
 		const{data, error} = await supabase
 			.from('User')
-			.update({ recentlyPlayed: recentTracks })
+			.update({ recentlyPlayed: recentTracksID })
 			.eq('spotifyID', sID)
 			.select();
 

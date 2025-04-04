@@ -1,5 +1,5 @@
 import React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import {
   Text,
   View,
@@ -15,18 +15,37 @@ import PlaylistItem from "../../../components/PlaylistItem";
 import { Link, router } from "expo-router";
 const { width } = Dimensions.get("window");
 import supabase from "../../utils/supabaseClient";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function LibraryScreen() {
   const [playlists, setPlaylists] = useState<any[]>([]);
+  const [user, setUser] = useState<any>(null);
+
   useEffect(() => {
     async function fetchData() {
-      const { data, error } = await supabase.from("Playlist").select("*");
+      const storedId = await AsyncStorage.getItem("spotifyID");
+      //Fetch user data from supabase using stored ID
+      const { data: userData, error: userError } = await supabase
+        .from("User")
+        .select("*")
+        .eq("spotifyID", storedId)
+        .single();
+  
+      if (userError) {
+        console.log(userError)
+      } 
+      else {
+        setUser(userData);
+        console.log(userData);
+      }
 
-      if (error) {
-        console.error("Error fetching data:", error);
+      const { data:playlistData, error: playlistError } = await supabase.from("Playlist").select("*").eq("createdBy", userData.id);
+
+      if (playlistError) {
+        console.error("Error fetching data:", playlistError);
       } else {
-        setPlaylists(data);
-        console.log("Fetched data:", data);
+        setPlaylists(playlistData);
+        console.log("Library: Fetched playlists - ", playlistData);
       }
     }
 
@@ -63,6 +82,7 @@ export default function LibraryScreen() {
   );
 
   return (
+    
     <ScrollView>
       <View style={styles.libraryContainer}>
         <View style={styles.headerContainer}>
