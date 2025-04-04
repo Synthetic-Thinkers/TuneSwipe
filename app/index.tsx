@@ -49,20 +49,28 @@ export default function login() {
 );
 
 useEffect (() => {
-	if(response?.type == "success") {
-		const {access_token}= response.params;
-		console.log('accessToken -> ', access_token);
-    	successfulAuth = true;
-		getUser(access_token);
-    	router.replace("/(tabs)/library")
-	}
-	else if (response?.type == "error") {
+	const handleAuth = async () => {
+	  if (response?.type === "success") {
+		try {
+		  const { access_token } = response.params;
+		  await AsyncStorage.setItem("accessToken", access_token);
+		  console.log("accessToken -> ", access_token);
+
+		  getUser(access_token);
+		  router.replace("/(tabs)/library");
+		} catch (error) {
+		  console.error("Error storing access token:", error);
+		}
+	  } else if (response?.type === "error") {
 		console.error("Auth error ->", response.error);
-	}
-	else {
+	  } else {
 		console.log("Waiting for Spotify Auth");
-	}
-}, [response]);
+	  }
+	};
+
+	handleAuth(); // Call the async function inside useEffect
+
+  }, [response]); // Ensure `response` is listed in dependencies
 
 const getUser = async (token: string) => {
 	console.log("-- From getUser --");

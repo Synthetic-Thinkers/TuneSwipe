@@ -1,5 +1,7 @@
 import React, { useState , useEffect, useRef} from "react";
-import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions, Platform} from "react-native";
+import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions, Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+// import SpotifyWebApi from 'spotify-web-api-node';
 import Swiper from 'react-native-deck-swiper';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Entypo } from "@expo/vector-icons";
@@ -30,6 +32,7 @@ export default function SwipeScreen({ navigation }) {
 
   const { spotifyID, mode, activityLog } = route.params as RouteParams;
 
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [index, setIndex] = useState(0);
   const [musicData, setMusicData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,6 +41,7 @@ export default function SwipeScreen({ navigation }) {
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [showBlur, setShowBlur] = useState(true);
   const swiperRef = useRef<Swiper<any>>(null);
+  // const spotifyApi = new SpotifyWebApi();
 
 
   const [fontsLoaded] = useFonts({
@@ -48,6 +52,57 @@ export default function SwipeScreen({ navigation }) {
     Inter_800ExtraBold,
   });
 
+
+
+  useEffect(() => {
+    async function getToken() {
+      try {
+        const token = await AsyncStorage.getItem("accessToken");
+        if (token) {
+          console.log('Token:', token);
+          setAccessToken(token);
+        } else {
+          console.log("No Token Found.")
+        }
+      } catch (error) {
+        console.error("Error retrieving Token:", error);
+      }
+    }
+
+    getToken();
+  }, []);
+
+
+  const extractArtistsIds = (musicData) => {
+    const allArtistsIds = musicData.flatMap(song => song.artistsID);
+    console.log('All artists ids:', allArtistsIds);
+    return allArtistsIds;
+  };
+
+  const fetchArtistsDetails = async (artistsIDs, accessToken) => {
+    if (artistsIDs.length === 0) return;
+
+    try {
+      const idsParam = artistsIDs.join(",");
+
+      const response = await fetch(`https://api.spotify.com/v1/artists?ids=${idsParam}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) throw new Error("Failed to fetch artist details");
+
+      const data = await response.json();
+
+      const artistNames = data.artists.map((artist) => artist.name);
+      console.log('Artists Names:', artistNames);
+      return artistNames;
+    } catch (error) {
+      console.error("Error fetching artist details from Spotify:", error);
+      return [];
+    }
+  };
 
   const fetchData = async () => {
     let data;
@@ -62,6 +117,28 @@ export default function SwipeScreen({ navigation }) {
       }
       data = songData;
       console.log(data);
+
+      const artistsIDs = extractArtistsIds(data);
+
+      if (artistsIDs.length > 0 && accessToken) {
+        const artistNames = await fetchArtistsDetails(artistsIDs, accessToken);
+        console.log("Fetched artist names:", artistNames);
+
+        const updatedSongData = data.map((song) => {
+          const artistNamesForSong = song.artistsID.map((artistID) => {
+            const artistIndex = artistNames.findIndex((name, index) => artistID === artistsIDs[index]);
+            return artistIndex !== -1 ? artistNames[artistIndex] : "Unknown Artist";
+          });
+
+          const artistName = artistNamesForSong.join(", ") || "Unknown Artist";
+          return {
+            ...song,
+            artistName: artistName,
+          };
+        });
+        data = updatedSongData;
+        console.log('Updated Song Data:', data);
+      }
       setLoading(false);
     } else if (mode === 'artists') {
       const { data: artistData, error } = await supabase
@@ -110,13 +187,15 @@ export default function SwipeScreen({ navigation }) {
 
 
   useEffect(() => {
-    fetchData();
-    fetchActivityLogs();
-  }, [mode]);
+    if (accessToken) {
+      fetchData();
+      fetchActivityLogs();
+    }
+  }, [accessToken, mode]);
 
   if (loading || !fontsLoaded) {
     return (
-      <View style={styles.container}>
+      <View style={styles.loadingContainer}>
         <Text style={styles.text}>Loading your next vibe check... almost there!</Text>
         <Image style={styles.turntableIcon} source={require('../../../assets/images/turntable.gif')} />
       </View>
@@ -181,7 +260,7 @@ export default function SwipeScreen({ navigation }) {
               <View style={styles.textContainer}>
                   {mode === 'songs' ? (
                     <Text style={styles.songText}>
-                      {firstCard.artistID} - {firstCard.title}
+                      {firstCard.artistName} - {firstCard.title}
                     </Text>
                   ) : (
                     <Text style={styles.songText}>{firstCard.name}</Text>
@@ -192,8 +271,8 @@ export default function SwipeScreen({ navigation }) {
                 </View>
               <View style={styles.choiceContainer}>
                 <View style={styles.rectangle}></View>
-                <Ionicons name="close-circle-outline" size={80} style={styles.dislikeIcon} />
-                <Ionicons name="heart-circle-outline" size={80} style={styles.likeIcon} />
+                <Ionicons name="close-circle-outline" size={80} color="#CC0058" />
+                <Ionicons name="heart-circle-outline" size={80} color="#98F5E1" />
               </View>
             </View>
             <BlurView intensity={30} style={styles.blurView} tint="light" />
@@ -239,7 +318,7 @@ export default function SwipeScreen({ navigation }) {
                 <View style={styles.textContainer}>
                   {mode === 'songs' ? (
                     <Text style={styles.songText}>
-                      {card.artistID} - {card.title}
+                      {card.artistName} - {card.title}
                     </Text>
                   ) : (
                     <Text style={styles.songText}>{card.name}</Text>
@@ -251,14 +330,14 @@ export default function SwipeScreen({ navigation }) {
                 <View style={styles.choiceContainer}>
                   <View style={styles.rectangle}></View>
                   <TouchableOpacity
-                    style={styles.dislikeButton}
+                    style={styles.button}
                     onPress={() => swiperRef.current?.swipeLeft()} >
-                    <Ionicons name="close-circle-outline" size={80} style={styles.dislikeButton} />
+                    <Ionicons name="close-circle-outline" size={80} color="#CC0058" />
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={styles.likeButton}
+                    style={styles.button}
                     onPress={() => swiperRef.current?.swipeRight()} >
-                    <Ionicons name="heart-circle-outline" size={80} style={styles.likeButton} />
+                    <Ionicons name="heart-circle-outline" size={80} color="#98F5E1" />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -274,7 +353,6 @@ export default function SwipeScreen({ navigation }) {
             onSwipedAll={handleSwipedAll}
             />
         )}
-
       </View>
     </TouchableOpacity>
   );
@@ -305,6 +383,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'white',
   },
   text: {
     fontFamily: 'Inter_800ExtraBold',
@@ -419,6 +503,10 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 8,
     position: 'absolute',
     bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 50,
   },
   rectangle: {
     backgroundColor: 'black',
@@ -429,25 +517,8 @@ const styles = StyleSheet.create({
     opacity: 0.4,
     position: 'absolute',
   },
-  dislikeIcon: {
-    color: '#CC0058',
-    position: 'absolute',
-    left: 97,
-  },
-  likeIcon: {
-    color: '#98F5E1',
-    position: 'absolute',
-    left: 216,
-  },
-  dislikeButton: {
-    color: '#CC0058',
-    position: 'absolute',
-    left: 48,
-  },
-  likeButton: {
-    color: '#98F5E1',
-    position: 'absolute',
-    left: 110,
+  button: {
+    marginHorizontal: 0,
   },
   arrowContainer: {
     flexDirection: 'row',
