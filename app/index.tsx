@@ -18,7 +18,7 @@ export default function login() {
 	const logo = require('../assets/images/TuneSwipe_Logo.png');
 	const router = useRouter();
 	const sheetRef = useRef<BottomSheet>(null);
-	const [isOpen, setIOpen] = useState(false);	
+	const [isOpen, setIOpen] = useState(false);
 	const handleSanpPress = useCallback((index: number) => {
 		sheetRef.current?.snapToIndex(index);
 		setIOpen(true);
@@ -46,14 +46,14 @@ export default function login() {
 	discovery
 );
 
-useEffect(() => {
+
+useEffect (() => {
 	const handleAuth = async () => {
 	  if (response?.type === "success") {
 		try {
 		  const { access_token } = response.params;
 		  await AsyncStorage.setItem("accessToken", access_token);
 		  console.log("accessToken -> ", access_token);
-  
 		  getUser(access_token);
 		  router.replace("/(tabs)/library");
 		} catch (error) {
@@ -65,9 +65,7 @@ useEffect(() => {
 		console.log("Waiting for Spotify Auth");
 	  }
 	};
-  
-	handleAuth(); // Call the async function inside useEffect
-  
+    handleAuth(); // Call the async function inside useEffect
   }, [response]); // Ensure `response` is listed in dependencies
 
 const getUser = async (token: string) => {
@@ -115,14 +113,15 @@ const getUser = async (token: string) => {
 			else {
 				console.log("New user added to Supabase!");
 			}
+
     }
     // Store the spotifyID in AsyncStorage
     await AsyncStorage.setItem("spotifyID", spotifyID);
-	getTopArtists(token, spotifyID)
+    getTopArtists(token, spotifyID)
 
 	} catch (error) {
 		console.error("ERROR - Could not get user.")
-	}
+  }
 };
 
 const getTopArtists = async (token: string, sID: string) => {
@@ -133,7 +132,7 @@ const getTopArtists = async (token: string, sID: string) => {
 	try{
 		const resultFromCall = await fetch("https://api.spotify.com/v1/me/top/artists?limit=10", {
 			method: "GET",
-			headers: { 
+			headers: {
 				Authorization: `Bearer ${token}`,
 				"Content-Type": "application/json",
 			},
@@ -148,14 +147,14 @@ const getTopArtists = async (token: string, sID: string) => {
 			allGenres.push(...item.genres);
 		});
 		console.log("Users top genres: ", allGenres)
-		
+
 		//Update User table
 		const{data, error} = await supabase
 			.from('User')
 			.update({ top10Artists: artistsID, topGenres: allGenres })
 			.eq('spotifyID', sID)
 			.select();
-		
+
 		if (error) {
 			console.error("ERROR - Could not update top10Artists and topGenres:", error.message);
 		} else {
@@ -175,7 +174,7 @@ const getTopTracks = async (token: string, sID: string) => {
 	try{
 		const resultFromCall = await fetch("https://api.spotify.com/v1/me/top/tracks?limit=10", {
 			method: "GET",
-			headers: { 
+			headers: {
 				Authorization: `Bearer ${token}`,
 				"Content-Type": "application/json",
 			},
@@ -184,14 +183,14 @@ const getTopTracks = async (token: string, sID: string) => {
 		const tracksID = jsonData.items.map((trackID: { id: any; }) => trackID.id);
 		console.log("Top 10 tracks:", tracksID);
 		console.log("SpotifyID from getTopTracks: ", sID);
-		
+
 		//Update User table
 		const{data, error} = await supabase
 			.from('User')
 			.update({ top10Tracks: tracksID })
 			.eq('spotifyID', sID)
 			.select();
-		
+
 		if (error) {
 			console.error("ERROR - Could not update top10Tracks:", error.message);
 		} else {
@@ -211,12 +210,13 @@ const getRecentTracks = async (token: string, sID: string) => {
 	try{
 		const resultFromCall = await fetch("https://api.spotify.com/v1/me/player/recently-played?limit=20", {
 			method: "GET",
-			headers: { 
+			headers: {
 				Authorization: `Bearer ${token}`,
 				"Content-Type": "application/json",
 			},
 		});
 		const jsonData = await resultFromCall.json();
+
 		const recentTracksID = jsonData.items.map((item: {track: any; id: any; }) => item.track.id);
 		console.log("Top 20 recently played tracks:", recentTracksID);
 		
@@ -226,7 +226,7 @@ const getRecentTracks = async (token: string, sID: string) => {
 			.update({ recentlyPlayed: recentTracksID })
 			.eq('spotifyID', sID)
 			.select();
-		
+
 		if (error) {
 			console.error("ERROR - Could not update recentlyPlayed:", error.message);
 		} else {
@@ -245,9 +245,9 @@ return (
 			<Text style = {{height: 80, fontSize: 20}}>Turn up the soundtrack of {'\n'}your life. Join the Beat Today</Text>
 
 			<View style={styles.button}>
-				<Button 
+				<Button
 					title="Start Now"
-					onPress={() => handleSanpPress(0)} 
+					onPress={() => handleSanpPress(0)}
 				/>
 			</View>
 
@@ -261,16 +261,16 @@ return (
 				<BottomSheetView style={styles.bottomSheetContainer	}>
 					<Text style={{fontSize: 25, height:35}}> Get Started</Text>
 					<Text style={{fontSize: 16, height:35}}> Login with Spofity and let the magic begin ... </Text>
-				
+
 					<View style={styles.buttonSpotify}>
-						<Button 
-							title= "Sign in with Spotify" 
-							onPress={() => promptAsync()} 
-						/> 
+						<Button
+							title= "Sign in with Spotify"
+							onPress={() => promptAsync()}
+						/>
 					</View>
 				</BottomSheetView>
 			</BottomSheet>
-		</ImageBackground>	
+		</ImageBackground>
 	</GestureHandlerRootView>
 );
 }
