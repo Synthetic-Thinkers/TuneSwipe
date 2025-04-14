@@ -1,7 +1,6 @@
 import React, { useState , useEffect, useRef} from "react";
-import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions, Platform } from "react-native";
+import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions, Platform, ActivityIndicator } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-// import SpotifyWebApi from 'spotify-web-api-node';
 import Swiper from 'react-native-deck-swiper';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Entypo } from "@expo/vector-icons";
@@ -41,8 +40,11 @@ export default function SwipeScreen({ navigation }) {
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [showBlur, setShowBlur] = useState(true);
   const swiperRef = useRef<Swiper<any>>(null);
-  // const spotifyApi = new SpotifyWebApi();
-
+  const [likedCards, setLikedCards] = useState<any[]>([]);
+  const swipeResultsRef = useRef(swipeResults);
+  const likedCardsRef = useRef<any[]>([]);
+  const [gifLoaded, setGifLoaded] = useState(false);
+  const [gifError, setGifError] = useState(false);
 
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -51,8 +53,6 @@ export default function SwipeScreen({ navigation }) {
     Inter_700Bold,
     Inter_800ExtraBold,
   });
-
-
 
   useEffect(() => {
     async function getToken() {
@@ -72,6 +72,13 @@ export default function SwipeScreen({ navigation }) {
     getToken();
   }, []);
 
+  useEffect(() => {
+    swipeResultsRef.current = swipeResults;
+  }, [swipeResults]);
+
+  useEffect(() => {
+    likedCardsRef.current = likedCards;
+  }, [likedCards]);
 
   const extractArtistsIds = (musicData) => {
     const allArtistsIds = musicData.flatMap(song => song.artistsID);
@@ -197,50 +204,83 @@ export default function SwipeScreen({ navigation }) {
     return (
       <View style={styles.loadingContainer}>
         <Text style={styles.text}>Loading your next vibe check... almost there!</Text>
-        <Image style={styles.turntableIcon} source={require('../../../assets/images/turntable.gif')} />
+        {!gifLoaded && <ActivityIndicator size="large" color="#fff" style={{ marginBottom: 20 }} />}
+
+        {gifError ? (
+          <Image
+            style={styles.turntableIcon}
+            source={require('../../../assets/images/TurnTable.png')}
+          />
+        ) : (
+          <Image
+            style={styles.turntableIcon}
+            source={{ uri: 'https://ierqhxlamotfahrwcsdz.supabase.co/storage/v1/object/public/assests//turntable.gif' }}
+            onLoad={() => setGifLoaded(true)}
+            onError={() => {
+              setGifLoaded(true);
+              setGifError(true);
+            }}
+          />
+        )}
       </View>
     );
   }
 
-
   const handleSwipeRight = (cardIndex) => {
+    // Every song swiped right will also be stored in an array for playlist.tsx (default for now)
+    const likedCard = musicData[cardIndex];
+    setLikedCards((prevLikedCards) => [...prevLikedCards, likedCard]);
+
     console.log(`Liked: ${musicData[cardIndex].title || musicData[cardIndex].name}`);
-    setSwipeResults((prevResults) => [
-      ...prevResults,
-      { id: musicData[cardIndex].id, liked: true }
-    ]);
+    setSwipeResults((prevResults) => {
+    const newResults = [...prevResults, { id: musicData[cardIndex].id, liked: true }];
+    return newResults;
+  });
   };
 
   const handleSwipeLeft = (cardIndex) => {
     console.log(`Disliked: ${musicData[cardIndex].title || musicData[cardIndex].name}`);
-    setSwipeResults((prevResults) => [
-      ...prevResults,
-      { id: musicData[cardIndex].id, liked: false }
-    ]);
+    setSwipeResults((prevResults) => {
+    const newResults = [...prevResults, { id: musicData[cardIndex].id, liked: false }];
+    return newResults;
+  });
   };
 
   const handleSwipedAll = async () => {
-    const updatedLogs = activityLogs.map(log =>
-    log._id === sessionID ? { ...log, swipeResults } : log
-  );
+    setLoading(true);
+    setTimeout(async () => {
+    // pull latest update from swipeResults
+    const latestSwipeResults = [...swipeResultsRef.current];
+    const latestLikedCards = [...likedCardsRef.current];
 
-  try {
-    const { error } = await supabase
-      .from("User")
-      .update({ activityLog: updatedLogs })
-      .eq("spotifyID", spotifyID);
+    console.log('LATEST SWIPE RESULTS:', latestSwipeResults);
+    console.log('LATEST LIKED CARDS:', latestLikedCards);
 
-    if (error) {
-      throw error;
+    if (latestSwipeResults.length === musicData.length) {
+      const updatedLogs = activityLogs.map((log) =>
+        log._id === sessionID ? { ...log, swipeResults: latestSwipeResults } : log
+      );
+
+      try {
+        const { error } = await supabase
+          .from('User')
+          .update({ activityLog: updatedLogs })
+          .eq('spotifyID', spotifyID);
+
+        if (error) throw error;
+
+        navigation.navigate('Playlist', {
+          likedCards: latestLikedCards,
+          spotifyID: spotifyID,
+          mode: mode,
+          activityLog: updatedLogs,
+          sessionID: sessionID,
+        });
+      } catch (error) {
+        console.error('Error saving updated activity log:', error);
+      }
     }
-
-    console.log("Successfully updated activity logs:", updatedLogs);
-    navigation.navigate("PlaylistLoading");
-  } catch (error) {
-    console.error("Error saving updated activity log:", error);
-  }
-    console.log('Swipe Results:', swipeResults);
-      navigation.navigate('PlaylistLoading');
+  }, 1000);
   };
 
   const onPressStart = () => setShowBlur(false);
