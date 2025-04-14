@@ -7,10 +7,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { supabase } from '../../../supabase';
 
-
 export default function IndexScreen({ navigation }) {
   const [spotifyID, setSpotifyID] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
+  const [avatarURL, setAvatarURL] = useState<string | null>(null);
 
   useEffect(() => {
   async function fetchUser() {
@@ -35,7 +35,7 @@ export default function IndexScreen({ navigation }) {
     async function getUser() {
       const { data, error } = await supabase
         .from('User')
-        .select('userName')
+        .select('userName, avatarURL')
         .eq('spotifyID', spotifyID)
         .maybeSingle();
 
@@ -43,6 +43,7 @@ export default function IndexScreen({ navigation }) {
         console.error("Error fetching data:", error);
       } else if (data) {
         setUsername(data.userName);
+        setAvatarURL(data.avatarURL);
         console.log("Fetched data: ", data.userName);
       } else {
         console.log("No user found with this Spotify ID.");
@@ -56,6 +57,7 @@ export default function IndexScreen({ navigation }) {
   const onPressStart = () => navigation.replace("Options", {
     spotifyID: spotifyID,
     username: username,
+    avatarURL: avatarURL,
   });
 
   const [fontsLoaded] = useFonts({
@@ -111,7 +113,14 @@ export default function IndexScreen({ navigation }) {
                 end={{ x: 1, y: 0.5 }}
                 locations={[0, 0.3, 0.58, 1]}
               >
-                <Image source={require('../../../assets/images/default-profile-picture.png')} style={styles.userPicture} />
+                <Image
+                  source={
+                    avatarURL
+                      ? { uri: avatarURL }
+                      : require('../../../assets/images/default-profile-picture.png')
+                  }
+                  style={styles.userPicture}
+                />
               </LinearGradient>
             </View>
           </View>

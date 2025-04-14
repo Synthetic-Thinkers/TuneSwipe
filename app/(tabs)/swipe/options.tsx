@@ -20,12 +20,13 @@ type ActivityLog = {
 type RouteParams = {
   spotifyID: string;
   username: string;
+  avatarURL: string;
   activityLog: ActivityLog;
 };
 
 export default function OptionsScreen({ navigation }) {
   const route = useRoute();
-  const { spotifyID, username } = route.params as RouteParams || {};
+  const { spotifyID, username, avatarURL } = route.params as RouteParams || {};
 
   const [selectedMode, setSelectedMode] = useState<string | null>(null);
 
@@ -160,7 +161,14 @@ export default function OptionsScreen({ navigation }) {
               end={{ x: 1, y: 0.5 }}
               locations={[0, 0.3, 0.58, 1]}
             >
-              <Image source={require('../../../assets/images/default-profile-picture.png')} style={styles.userPicture} />
+              <Image
+                source={
+                  avatarURL
+                    ? { uri: avatarURL }
+                    : require('../../../assets/images/default-profile-picture.png')
+                }
+                style={styles.userPicture}
+             />
             </LinearGradient>
           </View>
         </View>
