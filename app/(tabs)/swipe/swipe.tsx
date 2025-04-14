@@ -1,5 +1,6 @@
 import React, { useState , useEffect, useRef} from "react";
-import { View, Text, StyleSheet, Image, TouchableOpacity} from "react-native";
+import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions, Platform, ActivityIndicator } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Swiper from 'react-native-deck-swiper';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Entypo } from "@expo/vector-icons";
@@ -30,6 +31,7 @@ export default function SwipeScreen({ navigation }) {
 
   const { spotifyID, mode, activityLog } = route.params as RouteParams;
 
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [index, setIndex] = useState(0);
   const [musicData, setMusicData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,6 +40,11 @@ export default function SwipeScreen({ navigation }) {
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [showBlur, setShowBlur] = useState(true);
   const swiperRef = useRef<Swiper<any>>(null);
+  const [likedCards, setLikedCards] = useState<any[]>([]);
+  const swipeResultsRef = useRef(swipeResults);
+  const likedCardsRef = useRef<any[]>([]);
+  const [gifLoaded, setGifLoaded] = useState(false);
+  const [gifError, setGifError] = useState(false);
 
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -46,6 +53,63 @@ export default function SwipeScreen({ navigation }) {
     Inter_700Bold,
     Inter_800ExtraBold,
   });
+
+  useEffect(() => {
+    async function getToken() {
+      try {
+        const token = await AsyncStorage.getItem("accessToken");
+        if (token) {
+          console.log('Token:', token);
+          setAccessToken(token);
+        } else {
+          console.log("No Token Found.")
+        }
+      } catch (error) {
+        console.error("Error retrieving Token:", error);
+      }
+    }
+
+    getToken();
+  }, []);
+
+  useEffect(() => {
+    swipeResultsRef.current = swipeResults;
+  }, [swipeResults]);
+
+  useEffect(() => {
+    likedCardsRef.current = likedCards;
+  }, [likedCards]);
+
+  const extractArtistsIds = (musicData) => {
+    const allArtistsIds = musicData.flatMap(song => song.artistsID);
+    console.log('All artists ids:', allArtistsIds);
+    return allArtistsIds;
+  };
+
+  const fetchArtistsDetails = async (artistsIDs, accessToken) => {
+    if (artistsIDs.length === 0) return;
+
+    try {
+      const idsParam = artistsIDs.join(",");
+
+      const response = await fetch(`https://api.spotify.com/v1/artists?ids=${idsParam}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) throw new Error("Failed to fetch artist details");
+
+      const data = await response.json();
+
+      const artistNames = data.artists.map((artist) => artist.name);
+      console.log('Artists Names:', artistNames);
+      return artistNames;
+    } catch (error) {
+      console.error("Error fetching artist details from Spotify:", error);
+      return [];
+    }
+  };
 
   const fetchData = async () => {
     let data;
@@ -60,6 +124,28 @@ export default function SwipeScreen({ navigation }) {
       }
       data = songData;
       console.log(data);
+
+      const artistsIDs = extractArtistsIds(data);
+
+      if (artistsIDs.length > 0 && accessToken) {
+        const artistNames = await fetchArtistsDetails(artistsIDs, accessToken);
+        console.log("Fetched artist names:", artistNames);
+
+        const updatedSongData = data.map((song) => {
+          const artistNamesForSong = song.artistsID.map((artistID) => {
+            const artistIndex = artistNames.findIndex((name, index) => artistID === artistsIDs[index]);
+            return artistIndex !== -1 ? artistNames[artistIndex] : "Unknown Artist";
+          });
+
+          const artistName = artistNamesForSong.join(", ") || "Unknown Artist";
+          return {
+            ...song,
+            artistName: artistName,
+          };
+        });
+        data = updatedSongData;
+        console.log('Updated Song Data:', data);
+      }
       setLoading(false);
     } else if (mode === 'artists') {
       const { data: artistData, error } = await supabase
@@ -108,58 +194,93 @@ export default function SwipeScreen({ navigation }) {
 
 
   useEffect(() => {
-    fetchData();
-    fetchActivityLogs();
-  }, [mode]);
+    if (accessToken) {
+      fetchData();
+      fetchActivityLogs();
+    }
+  }, [accessToken, mode]);
 
   if (loading || !fontsLoaded) {
     return (
-      <View style={styles.container}>
+      <View style={styles.loadingContainer}>
         <Text style={styles.text}>Loading your next vibe check... almost there!</Text>
-        <Image style={styles.turntableIcon} source={require('../../../assets/images/turntable.gif')} />
+        {!gifLoaded && <ActivityIndicator size="large" color="#fff" style={{ marginBottom: 20 }} />}
+
+        {gifError ? (
+          <Image
+            style={styles.turntableIcon}
+            source={require('../../../assets/images/TurnTable.png')}
+          />
+        ) : (
+          <Image
+            style={styles.turntableIcon}
+            source={{ uri: 'https://ierqhxlamotfahrwcsdz.supabase.co/storage/v1/object/public/assests//turntable.gif' }}
+            onLoad={() => setGifLoaded(true)}
+            onError={() => {
+              setGifLoaded(true);
+              setGifError(true);
+            }}
+          />
+        )}
       </View>
     );
   }
 
-
   const handleSwipeRight = (cardIndex) => {
+    // Every song swiped right will also be stored in an array for playlist.tsx (default for now)
+    const likedCard = musicData[cardIndex];
+    setLikedCards((prevLikedCards) => [...prevLikedCards, likedCard]);
+
     console.log(`Liked: ${musicData[cardIndex].title || musicData[cardIndex].name}`);
-    setSwipeResults((prevResults) => [
-      ...prevResults,
-      { id: musicData[cardIndex].id, liked: true }
-    ]);
+    setSwipeResults((prevResults) => {
+    const newResults = [...prevResults, { id: musicData[cardIndex].id, liked: true }];
+    return newResults;
+  });
   };
 
   const handleSwipeLeft = (cardIndex) => {
     console.log(`Disliked: ${musicData[cardIndex].title || musicData[cardIndex].name}`);
-    setSwipeResults((prevResults) => [
-      ...prevResults,
-      { id: musicData[cardIndex].id, liked: false }
-    ]);
+    setSwipeResults((prevResults) => {
+    const newResults = [...prevResults, { id: musicData[cardIndex].id, liked: false }];
+    return newResults;
+  });
   };
 
   const handleSwipedAll = async () => {
-    const updatedLogs = activityLogs.map(log =>
-    log._id === sessionID ? { ...log, swipeResults } : log
-  );
+    setLoading(true);
+    setTimeout(async () => {
+    // pull latest update from swipeResults
+    const latestSwipeResults = [...swipeResultsRef.current];
+    const latestLikedCards = [...likedCardsRef.current];
 
-  try {
-    const { error } = await supabase
-      .from("User")
-      .update({ activityLog: updatedLogs })
-      .eq("spotifyID", spotifyID);
+    console.log('LATEST SWIPE RESULTS:', latestSwipeResults);
+    console.log('LATEST LIKED CARDS:', latestLikedCards);
 
-    if (error) {
-      throw error;
+    if (latestSwipeResults.length === musicData.length) {
+      const updatedLogs = activityLogs.map((log) =>
+        log._id === sessionID ? { ...log, swipeResults: latestSwipeResults } : log
+      );
+
+      try {
+        const { error } = await supabase
+          .from('User')
+          .update({ activityLog: updatedLogs })
+          .eq('spotifyID', spotifyID);
+
+        if (error) throw error;
+
+        navigation.navigate('Playlist', {
+          likedCards: latestLikedCards,
+          spotifyID: spotifyID,
+          mode: mode,
+          activityLog: updatedLogs,
+          sessionID: sessionID,
+        });
+      } catch (error) {
+        console.error('Error saving updated activity log:', error);
+      }
     }
-
-    console.log("Successfully updated activity logs:", updatedLogs);
-    navigation.navigate("PlaylistLoading");
-  } catch (error) {
-    console.error("Error saving updated activity log:", error);
-  }
-    console.log('Swipe Results:', swipeResults);
-      navigation.navigate('PlaylistLoading');
+  }, 1000);
   };
 
   const onPressStart = () => setShowBlur(false);
@@ -171,14 +292,28 @@ export default function SwipeScreen({ navigation }) {
         {/* Show BlurView and Instructions when 'showBlur' is true */}
         {showBlur && (
           <>
-            <Image
-             source={firstCard.imageUrl ? { uri: firstCard.imageUrl } : require('../../../assets/images/defaultImage.png')}
-             style={styles.image}
-            />
-            <View style={styles.choiceContainer}>
-              <View style={styles.rectangle}></View>
-              <Ionicons name="close-circle-outline" size={80} style={styles.dislikeIcon} />
-              <Ionicons name="heart-circle-outline" size={80} style={styles.likeIcon} />
+            <View style={styles.startCardContainer}>
+              <Image
+               source={firstCard.imageUrl ? { uri: firstCard.imageUrl } : require('../../../assets/images/defaultImage.png')}
+               style={styles.image}
+              />
+              <View style={styles.textContainer}>
+                  {mode === 'songs' ? (
+                    <Text style={styles.songText}>
+                      {firstCard.artistName} - {firstCard.title}
+                    </Text>
+                  ) : (
+                    <Text style={styles.songText}>{firstCard.name}</Text>
+                )}
+                {mode !== 'genres' && firstCard.genres && (
+                  <Text style={styles.genreText}>{firstCard.genres.join(' + ')}</Text>
+                )}
+                </View>
+              <View style={styles.choiceContainer}>
+                <View style={styles.rectangle}></View>
+                <Ionicons name="close-circle-outline" size={80} color="#CC0058" />
+                <Ionicons name="heart-circle-outline" size={80} color="#98F5E1" />
+              </View>
             </View>
             <BlurView intensity={30} style={styles.blurView} tint="light" />
             <View style={styles.instructContainer}>
@@ -191,7 +326,7 @@ export default function SwipeScreen({ navigation }) {
                 <Entypo name="arrow-left" size={80} style={styles.arrowIcon} />
                 <Entypo name="arrow-right" size={80} style={styles.arrowIcon} />
               </View>
-            </View>
+              </View>
           </>
         )}
 
@@ -202,8 +337,8 @@ export default function SwipeScreen({ navigation }) {
             renderCard={(card) => (
               <View style={styles.cardContainer}>
                 {mode === 'songs' ? (
-                  card.image ? (
-                    <Image source={{ uri: card.image }} style={styles.image} />
+                  card.imageUrl ? (
+                    <Image source={{ uri: card.imageUrl }} style={styles.image} />
                   ) : (
                     <Image source={require('../../../assets/images/defaultImage.png')} style={styles.image} />
                   )
@@ -223,24 +358,26 @@ export default function SwipeScreen({ navigation }) {
                 <View style={styles.textContainer}>
                   {mode === 'songs' ? (
                     <Text style={styles.songText}>
-                      {card.artistID} - {card.title}
+                      {card.artistName} - {card.title}
                     </Text>
                   ) : (
                     <Text style={styles.songText}>{card.name}</Text>
                   )}
-                  <Text style={styles.genreText}>{card.genre}</Text>
+                  {mode !== 'genres' && firstCard.genres && (
+                    <Text style={styles.genreText}>{firstCard.genres.join(' + ')}</Text>
+                  )}
                 </View>
                 <View style={styles.choiceContainer}>
                   <View style={styles.rectangle}></View>
                   <TouchableOpacity
-                    style={styles.dislikeButton}
+                    style={styles.button}
                     onPress={() => swiperRef.current?.swipeLeft()} >
-                    <Ionicons name="close-circle-outline" size={80} style={styles.dislikeButton} />
+                    <Ionicons name="close-circle-outline" size={80} color="#CC0058" />
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={styles.likeButton}
+                    style={styles.button}
                     onPress={() => swiperRef.current?.swipeRight()} >
-                    <Ionicons name="heart-circle-outline" size={80} style={styles.likeButton} />
+                    <Ionicons name="heart-circle-outline" size={80} color="#98F5E1" />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -254,19 +391,44 @@ export default function SwipeScreen({ navigation }) {
             cardIndex={index}
             onSwiped={(swipeIndex) => {setIndex(swipeIndex + 1);}}
             onSwipedAll={handleSwipedAll}
-          />
+            />
         )}
       </View>
     </TouchableOpacity>
   );
 }
 
+const { width, height } = Dimensions.get('window');
+
+// Set a BASE height
+const BASE_HEIGHT = 715;
+
+let dynamicHeight;
+
+// If screen is on large devices, shrink it
+if (height > 896) {
+  dynamicHeight = Math.min(height * 0.7, 700);
+}
+// If screen is on small devices, shrink accordingly
+else if (height < 896) {
+  dynamicHeight = Math.min(height * 0.84, 620);
+}
+// Otherwise, keep the default height
+else {
+  dynamicHeight = BASE_HEIGHT;
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffff',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'white',
   },
   text: {
     fontFamily: 'Inter_800ExtraBold',
@@ -281,8 +443,11 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   swiperContainer: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    alignSelf: "center",
+    backgroundColor: 'transparent',
   },
   blurView: {
     position: 'absolute',
@@ -315,9 +480,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   instructContainer: {
-    top: 320,
     position: "absolute",
-    alignItems:'center',
+    alignItems: 'center',
   },
   songText: {
     fontFamily: 'Inter_600SemiBold',
@@ -333,32 +497,56 @@ const styles = StyleSheet.create({
     padding: 2,
     borderRadius: 12,
   },
+    cardContainer: {
+    borderRadius: 8,
+    width: Math.min(width * 0.91, 377), // Keeps width consistent
+    height: dynamicHeight, // Ensures card is not too tall
+    bottom: Math.min(height * 0.06, 55),
+    alignSelf: 'center',
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: Platform.OS === 'android' ? 5 : 0, // Android shadow fix
+  },
+  startCardContainer: {
+    borderRadius: 8,
+    width: Math.min(width * 0.91, 377), // Keeps width consistent
+    height: dynamicHeight, // Ensures card is not too tall
+    bottom: Math.min(height * 0.06, 55),
+    alignSelf: 'center',
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: Platform.OS === 'android' ? 5 : 0, // Android shadow fix
+    position: 'fixed',
+    top: 1,
+  },
   image: {
     borderRadius: 8,
     flex: 1,
-    width: 400,
+    resizeMode: 'cover',
+    width: 377,
     maxHeight: 715,
-  },
-  cardContainer: {
-    flex: 1,
-    borderRadius: 8,
-    width: 400,
-    maxHeight: 730,
-    alignSelf: 'center',
-    bottom: 55,
-    overflow: "hidden",
   },
   textContainer: {
     position: 'absolute',
-    top: 570,
+    bottom: 83 + 10,
   },
   choiceContainer: {
-    width: 400,
+    width: 377,
     height: 83,
     borderBottomLeftRadius: 8,
     borderBottomRightRadius: 8,
     position: 'absolute',
-    top: 632,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 50,
   },
   rectangle: {
     backgroundColor: 'black',
@@ -369,25 +557,8 @@ const styles = StyleSheet.create({
     opacity: 0.4,
     position: 'absolute',
   },
-  dislikeIcon: {
-    color: '#CC0058',
-    position: 'absolute',
-    left: 97,
-  },
-  likeIcon: {
-    color: '#98F5E1',
-    position: 'absolute',
-    left: 216,
-  },
-  dislikeButton: {
-    color: '#CC0058',
-    position: 'absolute',
-    left: 48,
-  },
-  likeButton: {
-    color: '#98F5E1',
-    position: 'absolute',
-    left: 110,
+  button: {
+    marginHorizontal: 0,
   },
   arrowContainer: {
     flexDirection: 'row',
