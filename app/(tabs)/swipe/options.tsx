@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRoute } from '@react-navigation/native';
-import { Text, View, StyleSheet, TouchableHighlight, Image } from 'react-native';
+import { Text, View, StyleSheet, TouchableHighlight, Image, Dimensions, Platform } from 'react-native';
 import { useFonts, Inter_400Regular, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,7 +27,6 @@ type RouteParams = {
 export default function OptionsScreen({ navigation }) {
   const route = useRoute();
   const { spotifyID, username, avatarURL } = route.params as RouteParams || {};
-
   const [selectedMode, setSelectedMode] = useState<string | null>(null);
 
   const handleSelection = async (mode: string) => {
@@ -99,7 +98,6 @@ export default function OptionsScreen({ navigation }) {
       });
     }
   };
-
 
   const [fontsLoaded] = useFonts({
     Inter_400Regular, // Regular Weight
@@ -184,6 +182,7 @@ export default function OptionsScreen({ navigation }) {
           </TouchableHighlight>
         </View>
         {/* Songs Button */}
+        <View style={styles.shadowContainer}>
         <TouchableHighlight style={styles.button} onPress={onPressSongs} underlayColor='#70A7FF'>
           <LinearGradient
             colors={['#98F5E1', '#3A86FF', '#A134BE']}
@@ -198,7 +197,9 @@ export default function OptionsScreen({ navigation }) {
             <Image source={require('../../../assets/images/vinyls/ORVinyl.png')} style={styles.vinyl3} />
           </LinearGradient>
         </TouchableHighlight>
+        </View>
         {/* Artists Button */}
+        <View style={styles.shadowContainer}>
         <TouchableHighlight style={styles.button} onPress={onPressArtists} underlayColor='#70A7FF'>
            <LinearGradient
             colors={['#3A86FF', '#FF1493', '#A134BE']}
@@ -213,7 +214,9 @@ export default function OptionsScreen({ navigation }) {
               <Image source={require('../../../assets/images/artists/CharliXCX.png')} style={styles.artist3} />
           </LinearGradient>
         </TouchableHighlight>
+      </View>
         {/* Genres Button */}
+        <View style={styles.shadowContainer}>
         <TouchableHighlight style={styles.button} onPress={onPressGenres} underlayColor='#70A7FF'>
            <LinearGradient
             colors={['#FF69B4', '#FF006E', '#CF0101']}
@@ -232,15 +235,41 @@ export default function OptionsScreen({ navigation }) {
           </LinearGradient>
           </TouchableHighlight>
         </View>
+        </View>
     </View>
   );
+}
+
+const { width, height } = Dimensions.get('window');
+// BASE dimensions (from iPhone 11 example)
+const BASE_WIDTH = 385;
+const BASE_HEIGHT = 130;
+
+let dynamicWidth;
+let dynamicHeight;
+
+// Responsive height logic
+if (height > 896) {
+  dynamicHeight = Math.min(height * 0.18, 130); // ~130/715 = 0.18
+} else if (height < 896) {
+  dynamicHeight = Math.min(height * 0.18, 80); // scale slightly smaller
+} else {
+  dynamicHeight = BASE_HEIGHT;
+}
+
+// Responsive width logic
+if (width > 414) {
+  dynamicWidth = Math.min(width * 0.93, 385); // ~385/414 = 0.93
+} else if (width < 414) {
+  dynamicWidth = Math.min(width * 0.93, 370);
+} else {
+  dynamicWidth = BASE_WIDTH;
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
+    // backgroundColor: '#ffffff',
     alignItems: 'center',
   },
   text: {
@@ -260,13 +289,14 @@ const styles = StyleSheet.create({
   rowContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
+    // justifyContent: 'flex-start',
+    // justifyContent: 'space-between',
   },
   userContainer: {
-    width: 385,
-    height: 130,
+    width: dynamicWidth,
+    height: dynamicHeight,
     alignContent: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     paddingHorizontal: 10,
   },
   userGreeting: {
@@ -284,7 +314,7 @@ const styles = StyleSheet.create({
     width: 75,
     height: 75,
     borderRadius: 75 / 2,
-    marginLeft: 10,
+    padding: 3,
   },
   gradient: {
     width: 75,
@@ -311,7 +341,7 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     justifyContent: 'center',
     alignContent: 'center',
-    margin: 13,
+    margin: 12,
     overflow: 'hidden',
   },
   buttonText: {
@@ -325,6 +355,20 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     fontSize: 16,
     marginLeft: 273,
+  },
+  shadowContainer: {
+     ...Platform.select({
+        ios: {
+          shadowColor: "rgba(0, 0, 0, 0.3)",
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 1,
+          shadowRadius: 7,
+          borderRadius: 30,
+        },
+        android: {
+          backgroundColor: 'transparent', // required or Android shows shadow
+        },
+      }),
   },
   gradientBackground: {
     width: 383 ,

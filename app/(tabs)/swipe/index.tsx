@@ -1,5 +1,5 @@
 import React, { useState, useEffect} from 'react';
-import { Text, View, StyleSheet, TouchableHighlight, Alert, Image, TouchableOpacity } from 'react-native';
+import { Text, View, StyleSheet, TouchableHighlight, Alert, Image, TouchableOpacity, Dimensions } from 'react-native';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -136,6 +136,7 @@ export default function IndexScreen({ navigation }) {
             </TouchableHighlight>
           </View>
           {/* Songs Button */}
+          <View style={styles.shadowContainer}>
           <TouchableHighlight style={styles.button} onPress={onPressSongs} underlayColor='#70A7FF'>
             <LinearGradient
               colors={['#98F5E1', '#3A86FF', '#A134BE']}
@@ -150,8 +151,10 @@ export default function IndexScreen({ navigation }) {
               <Image source={require('../../../assets/images/vinyls/ORVinyl.png')} style={styles.vinyl3} />
             </LinearGradient>
           </TouchableHighlight>
+          </View>
           {/* Artists Button */}
-          <TouchableHighlight style={styles.button} onPress={onPressArtists} underlayColor='#70A7FF'>
+          <View style={styles.shadowContainer}>
+            <TouchableHighlight style={styles.button} onPress={onPressArtists} underlayColor='#70A7FF'>
              <LinearGradient
               colors={['#3A86FF', '#FF1493', '#A134BE']}
               start={{ x: 0, y: 0 }} // Gradient starts from top-left
@@ -164,9 +167,11 @@ export default function IndexScreen({ navigation }) {
                 <Image source={require('../../../assets/images/artists/BillieE.png')} style={styles.artist2} />
                 <Image source={require('../../../assets/images/artists/CharliXCX.png')} style={styles.artist3} />
             </LinearGradient>
-          </TouchableHighlight>
+            </TouchableHighlight>
+          </View>
           {/* Genres Button */}
-          <TouchableHighlight style={styles.button} onPress={onPressGenres} underlayColor='#70A7FF'>
+          <View style={styles.shadowContainer}>
+            <TouchableHighlight style={styles.button} onPress={onPressGenres} underlayColor='#70A7FF'>
              <LinearGradient
               colors={['#FF69B4', '#FF006E', '#CF0101']}
               start={{ x: 0, y: 0 }} // Gradient starts from top-left
@@ -183,6 +188,7 @@ export default function IndexScreen({ navigation }) {
               <Image source={require('../../../assets/images/genres/Rock.png')} style={styles.genre6} />
             </LinearGradient>
             </TouchableHighlight>
+          </View>
         </View>
         <BlurView intensity={30} style={styles.blurView} tint="light" />
         <View style={styles.instructContainer}>
@@ -195,11 +201,37 @@ export default function IndexScreen({ navigation }) {
   );
 }
 
+
+const { width, height } = Dimensions.get('window');
+// BASE dimensions (from iPhone 11 example)
+const BASE_WIDTH = 385;
+const BASE_HEIGHT = 130;
+
+let dynamicWidth;
+let dynamicHeight;
+
+// Responsive height logic
+if (height > 896) {
+  dynamicHeight = Math.min(height * 0.18, 130); // ~130/715 = 0.18
+} else if (height < 896) {
+  dynamicHeight = Math.min(height * 0.18, 80); // scale slightly smaller
+} else {
+  dynamicHeight = BASE_HEIGHT;
+}
+
+// Responsive width logic
+if (width > 414) {
+  dynamicWidth = Math.min(width * 0.93, 385); // ~385/414 = 0.93
+} else if (width < 414) {
+  dynamicWidth = Math.min(width * 0.93, 370);
+} else {
+  dynamicWidth = BASE_WIDTH;
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
-    justifyContent: 'center',
     alignItems: 'center',
   },
   text: {
@@ -245,13 +277,13 @@ const styles = StyleSheet.create({
   rowContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
+    // justifyContent: 'flex-start',
   },
   userContainer: {
-    width: 385,
-    height: 130,
+    width: dynamicWidth,
+    height: dynamicHeight,
     alignContent: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     paddingHorizontal: 10,
   },
   userGreeting: {
@@ -269,7 +301,7 @@ const styles = StyleSheet.create({
     width: 75,
     height: 75,
     borderRadius: 75 / 2,
-    marginLeft: 10,
+    padding: 3,
   },
   gradient: {
     width: 75,
@@ -296,7 +328,7 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     justifyContent: 'center',
     alignContent: 'center',
-    margin: 13,
+    margin: 12,
     overflow: 'hidden',
   },
   buttonText: {
@@ -310,6 +342,14 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     fontSize: 16,
     marginLeft: 273,
+  },
+  shadowContainer: {
+    shadowColor: "rgba(0, 0, 0, 0.3)",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 1,
+    shadowRadius: 7,
+    elevation: 7,
+    borderRadius: 30,
   },
   gradientBackground: {
     width: 383 ,
