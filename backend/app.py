@@ -4,8 +4,14 @@ from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.sql.expression import func
 import os
 from dotenv import load_dotenv
+import spotipy
+from spotipy.oauth2 import SpotifyClientCredentials
+from spotify_utils import fetch_and_store_spotify_tracks
 
 load_dotenv()
+
+auth_manager = SpotifyClientCredentials(client_id=os.getenv('SPOTIPY_CLIENT_ID'), client_secret=os.getenv('SPOTIPY_CLIENT_SECRET'))
+sp = spotipy.Spotify(auth_manager=auth_manager)
 
 app = Flask(__name__)
 
@@ -108,15 +114,80 @@ def get_random_song():
 def get_swipe_recommendations():
     try:
         user_info = request.get_json()
-        # Get 10 random songs
+
         songs = Song.query.order_by(func.random()).limit(10).all()
 
-        # Convert each song to a dictionary
-        song_list = [song.to_dict() for song in songs]
+        # Only return song IDs
+        song_ids = [song.id for song in songs]
 
-        return jsonify({"recommended_songs": song_list}), 200
+        return jsonify({"songs": song_ids}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    # try:
+    #     user_info = request.get_json()
+    #     preference_vector = user_info.get("preference")
+
+    #     if not preference_vector or not isinstance(preference_vector, list):
+    #         recentTrackIDs = user_info.get("recentlyPlayed")
+    #         top10TrackIDs = user_info.get("top10Tracks")
+    #         combinedTrackIDs = list(set(recentTrackIDs + top10TrackIDs))
+    #         # Check if any of the tracks are already in the database
+    #         existingTrackData = Song.query.filter(Song.id.in_(combinedTrackIDs)).all()
+    #         existingTrackIDs = [track.id for track in existingTrackData]
+    #         missingTrackIDs = list(set(combinedTrackIDs) - set(existingTrackIDs))
+    #         # Save the new tracks to the database
+    #         missingTrackData = fetch_and_store_spotify_tracks(missingTrackIDs, sp)
+    #         # Combine existing and new tracks
+    #         combinedTrackData = existingTrackData + missingTrackData
+            
+    #     print("Existing", combinedTrackIDs)
+    #     return jsonify(combinedTrackData), 200
+    #     # Convert to NumPy array
+    #     user_vec = np.array(preference_vector).reshape(1, -1)
+
+    #     # Fetch all songs with valid feature vectors (or a subset for performance)
+    #     songs = Song.query.limit(500).all()
+
+    #     # Filter and collect song feature vectors
+    #     valid_songs = []
+    #     feature_vectors = []
+
+    #     for song in songs:
+    #         try:
+    #             vec = np.array([
+    #                 song.danceability,
+    #                 song.energy,
+    #                 song.valence,
+    #                 song.tempo,
+    #                 song.acousticness,
+    #                 song.instrumentalness,
+    #                 song.liveness,
+    #                 song.speechiness
+    #             ])
+    #             if np.isnan(vec).any():
+    #                 continue  # skip incomplete data
+    #             valid_songs.append(song)
+    #             feature_vectors.append(vec)
+    #         except:
+    #             continue
+
+    #     if not valid_songs:
+    #         return jsonify({"error": "No valid songs with features found"}), 500
+
+    #     # Compute cosine similarity
+    #     features_np = np.stack(feature_vectors)
+    #     similarities = cosine_similarity(user_vec, features_np)[0]
+
+    #     # Pair scores with songs
+    #     scored_songs = list(zip(similarities, valid_songs))
+    #     top_songs = sorted(scored_songs, key=lambda x: x[0], reverse=True)[:10]
+
+    #     # Serialize result
+    #     result = [song.to_dict() for _, song in top_songs]
+    #     return jsonify({"recommended_songs": result}), 200
+
+    # except Exception as e:
+    #     return jsonify({"error": str(e)}), 500
 
 
 @app.route('/create-playlist', methods=['POST'])
@@ -124,16 +195,15 @@ def create_playlist():
     try:
         user_info = request.get_json()
 
-        # Get 10 random songs
         songs = Song.query.order_by(func.random()).limit(30).all()
 
-        # Convert each song to a dictionary 
-        song_list = [song.to_dict() for song in songs]
+        # Only return song IDs
+        song_ids = [song.id for song in songs]
 
-        return jsonify({"recommended_songs": song_list}), 200
+        return jsonify({"songs": song_ids}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
-if __name__ == '__main__':
-    app.run(debug=True)
+if __name__ == "__main__":
+   app.run(host="0.0.0.0", port=5000, debug=True)
