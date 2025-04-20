@@ -4,7 +4,6 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useState, useEffect } from 'react';
 import { supabase } from "../../../supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Auth from 'expo-auth-session';
 
 // Types
 interface Song {
@@ -15,12 +14,32 @@ interface Song {
   spotify_uri?: string;
 }
 
-interface SupabaseSong {
+interface SpotifyArtist {
   id: string;
-  title: string;
-  artistID: string | number;
-  spotifyURL?: string;
-  image?: string;
+  name: string;
+}
+
+interface SpotifyTrack {
+  id: string;
+  name: string;
+  uri: string;
+  artists: SpotifyArtist[];
+  album: {
+    id: string;
+    name: string;
+    images: Array<{
+      url: string;
+      height: number;
+      width: number;
+    }>;
+  };
+  duration_ms: number;
+}
+
+interface SpotifyCurrentlyPlaying {
+  item: SpotifyTrack;
+  is_playing: boolean;
+  progress_ms: number;
 }
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -28,7 +47,7 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 export default function ActivityScreen() {
   // Current playing song state
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
-
+  
   // Queue state
   const [queue, setQueue] = useState<Song[]>([]);
   
@@ -41,8 +60,8 @@ export default function ActivityScreen() {
 
   // Player state
   const [isPlaying, setIsPlaying] = useState(true);
-  const [currentTime, setCurrentTime] = useState('0:36');
-  const [totalTime, setTotalTime] = useState('3:40');
+  const [currentTime, setCurrentTime] = useState('0:00');
+  const [totalTime, setTotalTime] = useState('0:00');
   const [liked, setLiked] = useState(false);
   const [spotifyToken, setSpotifyToken] = useState<string | null>(null);
   const [spotifyID, setSpotifyID] = useState<string | null>(null);
@@ -50,189 +69,528 @@ export default function ActivityScreen() {
   // Default fallback image
   const DEFAULT_IMAGE = require('../../../assets/images/placeholder/placeholder.jpg');
 
-  // Get Spotify ID from AsyncStorage - using your existing approach
+  const debugAsyncStorage = async () => {
+    try {
+      const keys = await AsyncStorage.getAllKeys();
+      console.log("All AsyncStorage keys:", keys);
+      
+      for (const key of keys) {
+        const value = await AsyncStorage.getItem(key);
+        console.log(`Key: ${key}, Value exists: ${!!value}, Value length: ${value ? value.length : 0}`);
+      }
+    } catch (e) {
+      console.error("AsyncStorage debug error:", e);
+    }
+  };
+
+  // Get Spotify ID and token from AsyncStorage
   useEffect(() => {
+
+    debugAsyncStorage();
+    
     const getSpotifyDetails = async () => {
       try {
-        // Get spotifyID that you're storing in your login page
+        // Get spotifyID and token
         const id = await AsyncStorage.getItem('spotifyID');
+        const token = await AsyncStorage.getItem('accessToken');
+
+        console.log("Token from AsyncStorage:", token);
+        console.log("Token type:", typeof token);
+        console.log("Token length:", token ? token.length : 0);
+        
         if (id) {
           setSpotifyID(id);
           console.log("Retrieved Spotify ID:", id);
         }
+        
+        if (token) {
+          setSpotifyToken(token);
+          console.log("Retrieved Spotify token");
+        }
       } catch (err) {
-        console.error("Error retrieving Spotify ID:", err);
+        console.error("Error retrieving Spotify credentials:", err);
       }
     };
 
     getSpotifyDetails();
   }, []);
 
-  // Convert a Supabase song to our app's Song format
-  const convertToSong = (supabaseSong: SupabaseSong): Song => {
+  // Convert Spotify track to our app's Song format
+  const convertSpotifyTrackToSong = (track: SpotifyTrack): Song => {
     return {
-      id: supabaseSong.id,
-      title: supabaseSong.title,
-      artist: typeof supabaseSong.artistID === 'string' ? supabaseSong.artistID : `Artist ${supabaseSong.artistID}`,
-      cover: supabaseSong.image 
-        ? { uri: supabaseSong.image } 
+      id: track.id,
+      title: track.name,
+      artist: track.artists.map(artist => artist.name).join(", "),
+      cover: track.album.images[0]?.url 
+        ? { uri: track.album.images[0].url } 
         : DEFAULT_IMAGE,
-      spotify_uri: supabaseSong.spotifyURL || undefined
+      spotify_uri: track.uri
     };
   };
 
-  // Fetch songs from Supabase
-  useEffect(() => {
-    const fetchSongs = async (): Promise<void> => {
-      try {
-        setLoading(true);
-        
-        // Fetch songs from your Supabase table
-        const { data, error } = await supabase
-          .from('Song')
-          .select('*')
-          .limit(10);
-        
-        if (error) {
-          throw error;
+  // Get currently playing song from Spotify
+  const fetchCurrentlyPlaying = async () => {
+    if (!spotifyToken) {
+      console.log("No Spotify token available");
+      setError("Spotify token not available");
+      return;
+    }
+
+    try {
+      console.log("Fetching currently playing song...");
+      const response = await fetch('https://api.spotify.com/v1/me/player/currently-playing', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${spotifyToken}`
         }
-        
-        if (data && data.length > 0) {
-          // Set the first song as current
-          setCurrentSong(convertToSong(data[0]));
-          
-          // Set the rest as queue
-          const queueSongs = data.slice(1).map((song: SupabaseSong) => convertToSong(song));
-          
-          setQueue(queueSongs);
-        } else {
-          // If no data from Supabase, use fallback data
-          setCurrentSong({
-            id: '1',
-            title: 'Good 4 U',
-            artist: 'Olivia Rodrigo',
-            cover: DEFAULT_IMAGE,
-          });
-          
-          setQueue([
-            { id: '2', title: 'Sexy To Someone', artist: 'Clairo', cover: DEFAULT_IMAGE },
-            { id: '3', title: 'Video Games', artist: 'Lana Del Rey', cover: DEFAULT_IMAGE },
-            { id: '4', title: 'Die For You', artist: 'The Weeknd', cover: DEFAULT_IMAGE },
-            { id: '5', title: 'R U Mine?', artist: 'Arctic Monkeys', cover: DEFAULT_IMAGE },
-            { id: '6', title: 'Stargazing', artist: 'The Neighbourhood', cover: DEFAULT_IMAGE },
-            { id: '7', title: 'Telepatia', artist: 'Kali Uchis', cover: DEFAULT_IMAGE },
-            { id: '8', title: 'No One Noticed', artist: 'The Marias', cover: DEFAULT_IMAGE },
-          ]);
-        }
-      } catch (err: any) {
-        console.error('Error fetching songs:', err);
-        setError('Failed to load songs. Please try again later.');
-        
-        // Set fallback data
-        setCurrentSong({
-            id: '1',
-            title: 'Good 4 U',
-            artist: 'Olivia Rodrigo',
-            cover: DEFAULT_IMAGE,
-          });
-          
-          setQueue([
-            { id: '2', title: 'Sexy To Someone', artist: 'Clairo', cover: DEFAULT_IMAGE },
-            { id: '3', title: 'Video Games', artist: 'Lana Del Rey', cover: DEFAULT_IMAGE },
-            { id: '4', title: 'Die For You', artist: 'The Weeknd', cover: DEFAULT_IMAGE },
-            { id: '5', title: 'R U Mine?', artist: 'Arctic Monkeys', cover: DEFAULT_IMAGE },
-            { id: '6', title: 'Stargazing', artist: 'The Neighbourhood', cover: DEFAULT_IMAGE },
-            { id: '7', title: 'Telepatia', artist: 'Kali Uchis', cover: DEFAULT_IMAGE },
-            { id: '8', title: 'No One Noticed', artist: 'The Marias', cover: DEFAULT_IMAGE },
-          ]);
-      } finally {
+      });
+
+      // 204 means no content (nothing playing)
+      if (response.status === 204) {
+        console.log("No track currently playing");
+        setError("No song currently playing");
         setLoading(false);
+        return;
       }
-    };
+
+      if (!response.ok) {
+        throw new Error(`Error fetching currently playing: ${response.status}`);
+      }
+
+      const data: SpotifyCurrentlyPlaying = await response.json();
+      
+      if (data && data.item) {
+        console.log("Currently playing track:", data.item.name);
+        
+        // Convert to Song and update state
+        const song = convertSpotifyTrackToSong(data.item);
+        setCurrentSong(song);
+        setIsPlaying(data.is_playing);
+        
+        // Format time values
+        const progressMinutes = Math.floor(data.progress_ms / 60000);
+        const progressSeconds = Math.floor((data.progress_ms % 60000) / 1000);
+        setCurrentTime(`${progressMinutes}:${progressSeconds.toString().padStart(2, '0')}`);
+        
+        const durationMinutes = Math.floor(data.item.duration_ms / 60000);
+        const durationSeconds = Math.floor((data.item.duration_ms % 60000) / 1000);
+        setTotalTime(`${durationMinutes}:${durationSeconds.toString().padStart(2, '0')}`);
+        
+        // Check if the song is in the user's liked songs
+        checkIfSongIsLiked(data.item.id);
+        
+        // Fetch queue
+        fetchQueue();
+      }
+    } catch (err: any) {
+      console.error("Error fetching currently playing:", err);
+      setError("Failed to fetch currently playing song");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch queue from Spotify
+  const fetchQueue = async () => {
+    if (!spotifyToken) {
+      console.log("No Spotify token available");
+      return;
+    }
+
+    try {
+      console.log("Fetching queue...");
+      const response = await fetch('https://api.spotify.com/v1/me/player/queue', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${spotifyToken}`
+        }
+      });
+
+      if (!response.ok) {
+        console.error(`Error ${response.status}: ${response.statusText}`);
+        throw new Error(`Error fetching queue: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data && data.queue) {
+        console.log(`Queue contains ${data.queue.length} songs`);
+        
+        // Convert queue tracks to Song format
+        const queueSongs = data.queue.map((track: SpotifyTrack) => 
+          convertSpotifyTrackToSong(track)
+        );
+        
+        setQueue(queueSongs);
+      }
+    } catch (err) {
+      console.error("Error fetching queue:", err);
+    }
+  };
+
+  // Check if song is in user's liked songs
+  const checkIfSongIsLiked = async (trackId: string) => {
+    if (!spotifyToken) {
+      console.log("No Spotify token available");
+      return;
+    }
+
+    try {
+      const response = await fetch(`https://api.spotify.com/v1/me/tracks/contains?ids=${trackId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${spotifyToken}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error checking if track is saved: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        setLiked(data[0]);
+      }
+    } catch (err) {
+      console.error("Error checking if track is liked:", err);
+    }
+  };
+
+  // Fetch data on component mount and when token changes
+  useEffect(() => {
+    if (spotifyToken) {
+      fetchCurrentlyPlaying();
+      
+      // Set up polling to refresh data
+      const intervalId = setInterval(() => {
+        fetchCurrentlyPlaying();
+      }, 10000); // Every 10 seconds
+      
+      return () => clearInterval(intervalId);
+    } else {
+      // Fall back to Supabase data if no Spotify token
+      fetchSongsFromSupabase();
+    }
+  }, [spotifyToken]);
+
+  // Fallback: Fetch songs from Supabase
+  const fetchSongsFromSupabase = async () => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase
+        .from('Song')
+        .select('*')
+        .limit(10);
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data && data.length > 0) {
+        console.log("Fetched songs from Supabase:", data.length);
+        
+        // For each song, fetch artist info
+        const songsWithArtists = await Promise.all(data.map(async (song) => {
+          if (song.artistsID && Array.isArray(song.artistsID)) {
+            const { data: artistData } = await supabase
+              .from('Artist')
+              .select('*')
+              .in('spotifyID', song.artistsID);
+            
+            const artistNames = artistData
+              ?.map(artist => artist.name)
+              .filter(Boolean)
+              .join(', ');
+            
+            return {
+              ...song,
+              artistName: artistNames || 'Unknown Artist'
+            };
+          }
+          return song;
+        }));
+        
+        // Set current song
+        const currentSongData = songsWithArtists[0];
+        setCurrentSong({
+          id: currentSongData.id,
+          title: currentSongData.title,
+          artist: currentSongData.artistName || 'Unknown Artist',
+          cover: currentSongData.image 
+            ? { uri: currentSongData.image } 
+            : DEFAULT_IMAGE,
+          spotify_uri: currentSongData.spotifyURL
+        });
+        
+        // Set queue
+        const queueSongs = songsWithArtists.slice(1).map(song => ({
+          id: song.id,
+          title: song.title,
+          artist: song.artistName || 'Unknown Artist',
+          cover: song.image 
+            ? { uri: song.image } 
+            : DEFAULT_IMAGE,
+          spotify_uri: song.spotifyURL
+        }));
+        
+        setQueue(queueSongs);
+      } else {
+        // Fallback data
+        setCurrentSong({
+          id: '1',
+          title: 'Good 4 U',
+          artist: 'Olivia Rodrigo',
+          cover: DEFAULT_IMAGE,
+        });
+        
+        setQueue([
+          { id: '2', title: 'Sexy To Someone', artist: 'Clairo', cover: DEFAULT_IMAGE },
+          { id: '3', title: 'Video Games', artist: 'Lana Del Rey', cover: DEFAULT_IMAGE },
+          { id: '4', title: 'Die For You', artist: 'The Weeknd', cover: DEFAULT_IMAGE },
+          { id: '5', title: 'R U Mine?', artist: 'Arctic Monkeys', cover: DEFAULT_IMAGE },
+          { id: '6', title: 'Stargazing', artist: 'The Neighbourhood', cover: DEFAULT_IMAGE },
+          { id: '7', title: 'Telepatia', artist: 'Kali Uchis', cover: DEFAULT_IMAGE },
+          { id: '8', title: 'No One Noticed', artist: 'The Marias', cover: DEFAULT_IMAGE },
+        ]);
+      }
+    } catch (err: any) {
+      console.error('Error fetching songs from Supabase:', err);
+      setError('Failed to load songs. Please try again later.');
+      
+      // Fallback data
+      setCurrentSong({
+        id: '1',
+        title: 'Good 4 U',
+        artist: 'Olivia Rodrigo',
+        cover: DEFAULT_IMAGE,
+      });
+      
+      setQueue([
+        { id: '2', title: 'Sexy To Someone', artist: 'Clairo', cover: DEFAULT_IMAGE },
+        { id: '3', title: 'Video Games', artist: 'Lana Del Rey', cover: DEFAULT_IMAGE },
+        { id: '4', title: 'Die For You', artist: 'The Weeknd', cover: DEFAULT_IMAGE },
+        { id: '5', title: 'R U Mine?', artist: 'Arctic Monkeys', cover: DEFAULT_IMAGE },
+        { id: '6', title: 'Stargazing', artist: 'The Neighbourhood', cover: DEFAULT_IMAGE },
+        { id: '7', title: 'Telepatia', artist: 'Kali Uchis', cover: DEFAULT_IMAGE },
+        { id: '8', title: 'No One Noticed', artist: 'The Marias', cover: DEFAULT_IMAGE },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Spotify API control functions
+  const controlPlayback = async (action: 'play' | 'pause') => {
+    if (!spotifyToken) return false;
     
-    fetchSongs();
-  }, []);
+    try {
+      const response = await fetch(`https://api.spotify.com/v1/me/player/${action}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${spotifyToken}`
+        }
+      });
+      
+      return response.ok;
+    } catch (err) {
+      console.error(`Error ${action}ing playback:`, err);
+      return false;
+    }
+  };
+
+  const skipToNext = async () => {
+    if (!spotifyToken) return false;
+    
+    try {
+      const response = await fetch('https://api.spotify.com/v1/me/player/next', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${spotifyToken}`
+        }
+      });
+      
+      return response.ok;
+    } catch (err) {
+      console.error('Error skipping to next track:', err);
+      return false;
+    }
+  };
+
+  const skipToPrevious = async () => {
+    if (!spotifyToken) return false;
+    
+    try {
+      const response = await fetch('https://api.spotify.com/v1/me/player/previous', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${spotifyToken}`
+        }
+      });
+      
+      return response.ok;
+    } catch (err) {
+      console.error('Error skipping to previous track:', err);
+      return false;
+    }
+  };
+
+  const toggleSaveTrack = async (trackId: string, shouldSave: boolean) => {
+    if (!spotifyToken) return false;
+    
+    try {
+      const response = await fetch(`https://api.spotify.com/v1/me/tracks?ids=${trackId}`, {
+        method: shouldSave ? 'PUT' : 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${spotifyToken}`
+        }
+      });
+      
+      return response.ok;
+    } catch (err) {
+      console.error(`Error ${shouldSave ? 'saving' : 'removing'} track:`, err);
+      return false;
+    }
+  };
 
   // Player control functions
-  const handlePlayPause = (): void => {
-    setIsPlaying(!isPlaying);
-    // Will connect to Spotify play/pause API in the future
+  const handlePlayPause = async (): Promise<void> => {
+    if (spotifyToken) {
+      // Update UI immediately for responsiveness
+      const newPlayingState = !isPlaying;
+      setIsPlaying(newPlayingState);
+      
+      // Call Spotify API
+      const success = await controlPlayback(newPlayingState ? 'play' : 'pause');
+      
+      if (!success) {
+        // Revert if API call failed
+        setIsPlaying(!newPlayingState);
+        Alert.alert("Playback Error", "Failed to control playback. Please try again.");
+      }
+    } else {
+      // Local state only if no Spotify integration
+      setIsPlaying(!isPlaying);
+    }
+    
     console.log("Play/Pause toggled");
   };
 
-  const handleLike = (): void => {
+  const handleLike = async (): Promise<void> => {
     if (!currentSong) return;
     
     const newLikedStatus = !liked;
     setLiked(newLikedStatus);
     
-    // Update liked status in Supabase
-    if (spotifyID) {
-      updateLikedStatus(currentSong.id, newLikedStatus);
+    if (spotifyToken) {
+      // Update in Spotify
+      const success = await toggleSaveTrack(currentSong.id, newLikedStatus);
+      
+      if (!success) {
+        // Revert if API call failed
+        setLiked(!newLikedStatus);
+        Alert.alert("Error", `Failed to ${newLikedStatus ? 'like' : 'unlike'} this track.`);
+      }
+    } else if (spotifyID) {
+      // Update in Supabase if no Spotify token
+      try {
+        // Get current user data
+        const { data: userData, error: fetchError } = await supabase
+          .from('User')
+          .select('likedSongs')
+          .eq('spotifyID', spotifyID)
+          .single();
+        
+        if (fetchError) {
+          console.error('Error fetching user data:', fetchError);
+          return;
+        }
+        
+        // Update likedSongs array
+        let likedSongs = userData?.likedSongs || [];
+        
+        if (newLikedStatus) {
+          if (!likedSongs.includes(currentSong.id)) {
+            likedSongs.push(currentSong.id);
+          }
+        } else {
+          likedSongs = likedSongs.filter((id: string) => id !== currentSong.id);
+        }
+        
+        // Update database
+        const { error: updateError } = await supabase
+          .from('User')
+          .update({ likedSongs: likedSongs })
+          .eq('spotifyID', spotifyID);
+        
+        if (updateError) {
+          console.error('Error updating liked songs:', updateError);
+          setLiked(!newLikedStatus); // Revert state
+        }
+      } catch (err) {
+        console.error('Error in like/unlike operation:', err);
+        setLiked(!newLikedStatus); // Revert state
+      }
     }
     
     console.log("Like toggled for track:", currentSong.id);
   };
 
-  // Track liked status in Supabase
-  const updateLikedStatus = async (songId: string, liked: boolean): Promise<void> => {
-    if (!spotifyID) return;
-    
-    try {
-      // Store liked songs in Supabase
-      const { error } = await supabase
-        .from('liked_songs')
-        .upsert({ 
-          song_id: songId,
-          user_id: spotifyID,
-          liked: liked
-        });
-      
-      if (error) {
-        console.error('Error updating liked status:', error);
-      }
-    } catch (err: any) {
-      console.error('Error in like/unlike operation:', err);
-    }
-  };
-
-  const handleSkipNext = (): void => {
+  const handleSkipNext = async (): Promise<void> => {
     if (!currentSong || queue.length === 0) return;
     
-    // Add current song to history
-    setHistory(prevHistory => [currentSong, ...prevHistory]);
-    
-    // Set first song in queue as current and remove it from queue
-    setCurrentSong(queue[0]);
-    setQueue(queue.slice(1));
-    
-    // Reset liked status for new song
-    setLiked(false);
+    if (spotifyToken) {
+      // Call Spotify API
+      const success = await skipToNext();
+      
+      if (success) {
+        // Add current to history
+        setHistory(prevHistory => [currentSong, ...prevHistory]);
+        
+        // Fetch updated now playing after a short delay
+        setTimeout(() => fetchCurrentlyPlaying(), 1000);
+      } else {
+        Alert.alert("Playback Error", "Failed to skip to next track. Please try again.");
+      }
+    } else {
+      // Local queue management if no Spotify integration
+      setHistory(prevHistory => [currentSong, ...prevHistory]);
+      setCurrentSong(queue[0]);
+      setQueue(queue.slice(1));
+      setLiked(false);
+    }
     
     console.log("Skipped to next track");
   };
 
-  const handleSkipPrevious = (): void => {
+  const handleSkipPrevious = async (): Promise<void> => {
     if (!currentSong || history.length === 0) {
       console.log("No previous tracks available");
       return;
     }
     
-    // Get the most recent song from history
-    const previousSong = history[0];
-    
-    // Remove it from history
-    const newHistory = history.slice(1);
-    setHistory(newHistory);
-    
-    // Add current song to beginning of queue
-    setQueue(prevQueue => [currentSong!, ...prevQueue]);
-    
-    // Set previous song as current
-    setCurrentSong(previousSong);
-    
-    // Reset liked status for new song
-    setLiked(false);
+    if (spotifyToken) {
+      // Call Spotify API
+      const success = await skipToPrevious();
+      
+      if (success) {
+        const previousSong = history[0];
+        setHistory(history.slice(1));
+        
+        // Fetch updated now playing after a short delay
+        setTimeout(() => fetchCurrentlyPlaying(), 1000);
+      } else {
+        Alert.alert("Playback Error", "Failed to go to previous track. Please try again.");
+      }
+    } else {
+      // Local history management if no Spotify integration
+      const previousSong = history[0];
+      setHistory(history.slice(1));
+      setQueue(prevQueue => [currentSong!, ...prevQueue]);
+      setCurrentSong(previousSong);
+      setLiked(false);
+    }
     
     console.log("Went back to previous track");
   };
@@ -315,6 +673,14 @@ export default function ActivityScreen() {
           style={[styles.gradient, styles.loadingContainer]}
         >
           <Text style={styles.errorText}>No songs available.</Text>
+          {spotifyToken && (
+            <TouchableOpacity 
+              style={styles.spotifyButton}
+              onPress={() => fetchCurrentlyPlaying()}
+            >
+              <Text style={styles.spotifyButtonText}>Check Spotify</Text>
+            </TouchableOpacity>
+          )}
         </LinearGradient>
       </SafeAreaView>
     );
@@ -332,6 +698,12 @@ export default function ActivityScreen() {
           <Text style={styles.appTitle}>
             <Text style={{ color: '#FFFFFF' }}>TuneSwipe</Text>
           </Text>
+          {spotifyToken && (
+            <View style={styles.spotifyConnected}>
+              <Ionicons name="musical-notes" size={16} color="#1DB954" />
+              <Text style={styles.spotifyText}>Spotify Connected</Text>
+            </View>
+          )}
         </View>
 
         {error && (
@@ -522,6 +894,27 @@ const styles = StyleSheet.create({
   appTitle: {
     fontSize: 28,
     fontWeight: 'bold',
+  },
+  spotifyConnected: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 5,
+  },
+  spotifyText: {
+    fontSize: 12,
+    color: '#1DB954',
+    marginLeft: 4,
+  },
+  spotifyButton: {
+    backgroundColor: '#1DB954',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    marginTop: 15,
+  },
+  spotifyButtonText: {
+    color: 'white',
+    fontWeight: '600',
   },
   playingContainer: {
     alignItems: 'center',
