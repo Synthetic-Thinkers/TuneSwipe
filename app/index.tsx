@@ -51,12 +51,14 @@ export default function login() {
 useEffect (() => {
 	if(response?.type == "success") {
 		const {access_token}= response.params;
+		AsyncStorage.setItem('accessToken', access_token);
 		console.log('accessToken = ', access_token);
     	successfulAuth = true;
 		getUser(access_token);
     	router.replace("/(tabs)/library")
 	}
 }, [response]);
+
 
 const getUser = async (token: string) => {
 	console.log("-- From getUser --");
@@ -107,7 +109,7 @@ const getUser = async (token: string) => {
     await AsyncStorage.setItem("spotifyID", spotifyID);
 
 	} catch (error) {
-		console.error("ERROR - Could not get user.")
+		console.error("ERROR - Could not get user.");
 	}
 };
 

@@ -44,6 +44,7 @@ interface SpotifyCurrentlyPlaying {
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
+
 export default function ActivityScreen() {
   // Current playing song state
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
@@ -113,6 +114,7 @@ export default function ActivityScreen() {
     };
 
     getSpotifyDetails();
+    
   }, []);
 
   // Convert Spotify track to our app's Song format
@@ -193,6 +195,7 @@ export default function ActivityScreen() {
   // Fetch queue from Spotify
   const fetchQueue = async () => {
     if (!spotifyToken) {
+
       console.log("No Spotify token available");
       return;
     }
@@ -257,22 +260,67 @@ export default function ActivityScreen() {
     }
   };
 
-  // Fetch data on component mount and when token changes
   useEffect(() => {
-    if (spotifyToken) {
-      fetchCurrentlyPlaying();
-      
-      // Set up polling to refresh data
-      const intervalId = setInterval(() => {
-        fetchCurrentlyPlaying();
-      }, 10000); // Every 10 seconds
-      
-      return () => clearInterval(intervalId);
-    } else {
-      // Fall back to Supabase data if no Spotify token
-      fetchSongsFromSupabase();
-    }
+    console.log("Spotify Token: ", spotifyToken);
+    
+    // Define an async function inside useEffect
+    const getTokenAndFetchData = async () => {
+      try {
+        // Get token from AsyncStorage
+        const token = await AsyncStorage.getItem('accessToken');
+        console.log("Token from AsyncStorage:", token);
+        
+        if (token) {
+          // Set the token in state if needed
+          if (!spotifyToken) {
+            setSpotifyToken(token);
+          }
+          
+          // Fetch data using the token
+          fetchCurrentlyPlaying();
+          
+          // Set up polling to refresh data
+          const intervalId = setInterval(() => {
+            fetchCurrentlyPlaying();
+          }, 10000); // Every 10 seconds
+          
+          // Return the cleanup function
+          return () => clearInterval(intervalId);
+        } else {
+          console.log("No token found, falling back to Supabase data");
+          // Fall back to Supabase data if no Spotify token
+          fetchSongsFromSupabase();
+        }
+      } catch (error) {
+        console.error("Error getting token from AsyncStorage:", error);
+        fetchSongsFromSupabase();
+      }
+    };
+    
+    // Call the async function
+    getTokenAndFetchData();
+    
+    // Note: we return nothing here since the cleanup is handled in getTokenAndFetchData
   }, [spotifyToken]);
+
+  // Fetch data on component mount and when token changes
+  // useEffect(() => {
+  //   console.log("Spotify Token: ", spotifyToken);
+  //   const token = await AsyncStorage.getItem('accessToken');
+  //   if (token) {
+  //     fetchCurrentlyPlaying();
+      
+  //     // Set up polling to refresh data
+  //     const intervalId = setInterval(() => {
+  //       fetchCurrentlyPlaying();
+  //     }, 10000); // Every 10 seconds
+      
+  //     return () => clearInterval(intervalId);
+  //   } else {
+  //     // Fall back to Supabase data if no Spotify token
+  //     fetchSongsFromSupabase();
+  //   }
+  // }, [spotifyToken]);
 
   // Fallback: Fetch songs from Supabase
   const fetchSongsFromSupabase = async () => {
