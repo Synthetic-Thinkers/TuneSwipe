@@ -7,6 +7,12 @@ from dotenv import load_dotenv
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from spotify_utils import fetch_and_store_spotify_tracks
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 
 load_dotenv()
 
@@ -203,7 +209,110 @@ def create_playlist():
         return jsonify({"songs": song_ids}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@app.route('/cosinesim', methods=['GET'])
+def cosinesim():
+    results = db.session.query(
+        Song.id,
+        Song.danceability,
+        Song.energy,
+        Song.key,
+        Song.loudness,
+        Song.mode,
+        Song.speechiness,
+        Song.acousticness,
+        Song.instrumentalness,
+        Song.liveness,
+        Song.valence,
+        Song.tempo,
+        Song.time_signature
+    ).all()
+    target_ids = ["0qOnSQQF0yzuPWsXrQ9paz", "3bfqkspKABT4pPicm6wC9F"]
+    indices = [i for i, t in enumerate(results) if t[0] in target_ids]
+    matrix_data = [
+    song[1:]  # Exclude the first element (the 'id' column)
+    for song in results
+    ]
 
+    data_matrix = np.array(matrix_data)
+    
+    target_vector = data_matrix[indices[0]].reshape(1, -1)
+    print("Target Vector:", target_vector)
+    # Step 3: Compute cosine similarity
+    similarities = cosine_similarity(target_vector, data_matrix)[0]  # shape: (n_samples,)
+
+    # Step 4: Get top 30 similar songs (excluding the song itself at index 0)
+    top_indices = np.argsort(similarities)[::-1][0:31]  # Skip index 0 (self)
+
+    # Step 5: Return the top 30 song dicts (or IDs)
+    top_30_songs = [results[i] for i in top_indices]
+    
+    top_30_ids = [results[i][0] for i in top_indices]
+    
+    return jsonify({"songs":top_30_ids})
+
+@app.route('/logregression', methods=['GET'])
+def logregression():
+    results = db.session.query(
+        Song.id,
+        Song.danceability,
+        Song.energy,
+        Song.key,
+        Song.loudness,
+        Song.speechiness,
+        Song.acousticness,
+        Song.instrumentalness,
+        Song.liveness,
+        Song.valence,
+        Song.tempo,
+        Song.time_signature
+    ).all()
+    # Define the ID you're looking for
+    target_ids = ["0qOnSQQF0yzuPWsXrQ9paz", "3bfqkspKABT4pPicm6wC9F"]
+    indices = [i for i, t in enumerate(results) if t[0] in target_ids]
+
+    print("Indices:", indices)
+    
+    matrix_data = [
+    song[1:]  # Exclude the first element (the 'id' column)
+    for song in results
+    ]
+    data_matrix = np.array(matrix_data)
+    columns = [
+    'danceability',
+    'energy',
+    'key',
+    'loudness',
+    'speechiness',
+    'acousticness',
+    'instrumentalness',
+    'liveness',
+    'valence',
+    'tempo',
+    'time_signature'
+    ]
+
+    # Create DataFrame
+    df = pd.DataFrame(data_matrix, columns=columns)
+    selected_rows = df.iloc[indices]
+    # Optionally exclude already selected rows from top 28
+    extra_rows = df.head(1)
+    X_train = pd.concat([selected_rows, extra_rows], ignore_index=True)
+    n = 3
+    target = [1, 1] + [0] * (n - 2)
+    y_train = pd.DataFrame({'target': target})
+    
+    model = LogisticRegression()
+    # Train the model
+    model.fit(X_train, y_train)
+    y_pred = model.predict_proba(data_matrix)
+    probs_class_1 = y_pred[:, 1]
+    top_30_indices = np.argsort(probs_class_1)[-30:][::-1]
+    
+    top_30_ids = [results[i][0] for i in top_30_indices]
+    
+    return jsonify({"message": top_30_ids})
+    
 
 if __name__ == "__main__":
    app.run(host="0.0.0.0", port=5000, debug=True)
