@@ -53,16 +53,32 @@ async function fetchTracks(trackIds) {
 // Function to fetch artist details from Spotify
 // Artist IDs are passed as an array
 async function fetchArtists(artistIds) {
-    try {
-      await getAccessToken();
-      const response = await spotifyApi.getArtists(artistIds);
-      
-      return response.body.artists;
-    } catch (error) {
-      console.error('Error fetching artist details:', error);
-      return [];
+  try {
+    await getAccessToken();
+
+    // Split artistIds into chunks of 50
+    const chunks = [];
+    for (let i = 0; i < artistIds.length; i += 50) {
+      chunks.push(artistIds.slice(i, i + 50));
     }
+
+    // Fetch artists in parallel
+    const artistResponses = await Promise.all(
+      chunks.map(async (chunk) => {
+        const response = await spotifyApi.getArtists(chunk);
+        return response.body.artists;
+      })
+    );
+
+    // Flatten the array of results
+    const allArtists = artistResponses.flat();
+    
+    return allArtists;
+  } catch (error) {
+    console.error('Error fetching artist details:', error);
+    return [];
   }
+}
 
 // Function to store tracks in Supabase
 async function storeTracksInSupabase(trackData) {

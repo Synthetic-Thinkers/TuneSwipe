@@ -16,11 +16,30 @@ import {
 } from "react-native-popup-menu";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
-const ArtistIcon = ({ data, edit, onDelete }: { data: any; edit?: boolean, onDelete?:Function }) => {
-
+const ArtistIcon = ({
+  data,
+  edit,
+  onDelete,
+}: {
+  data: any;
+  edit?: boolean;
+  onDelete?: Function;
+}) => {
   return (
     <View style={styles.container}>
-      <Image source={{ uri: data.imageUrl }} style={styles.artistImage} />
+      {data.images && data.images.length > 0 ? (
+        <Image
+          source={{ uri: data.images[0].url }}
+          style={styles.artistImage}
+          resizeMode="cover"
+        />
+      ) : (
+        <Image
+          source={require("../../assets/images/default-profile-picture.png")} // path relative to this file
+          style={styles.artistImage}
+          resizeMode="cover"
+        />
+      )}
       {edit && onDelete && (
         <View style={styles.iconOverlay}>
           <Pressable onPress={() => onDelete()}>

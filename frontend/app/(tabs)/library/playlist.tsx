@@ -1,4 +1,11 @@
-import { Text, View, StyleSheet, ScrollView, Image } from "react-native";
+import {
+  Text,
+  View,
+  StyleSheet,
+  ScrollView,
+  Image,
+  Platform,
+} from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -102,7 +109,7 @@ export default function PlaylistScreen() {
 
   return (
     <ScrollView>
-      <View style={{ padding: 16 }}>
+      <View style={{ padding: 5 }}>
         <View style={styles.headerContainer}>
           <Link href="/library">
             <Ionicons name="chevron-back" size={24} color="black" />
@@ -110,24 +117,28 @@ export default function PlaylistScreen() {
           <Feather name="more-horizontal" size={24} color="black" />
         </View>
         <View style={styles.playlistInfoContainer}>
-          <Image
-            style={styles.playlistImage}
-            source={{
-              uri: playlistData.image
-                ? playlistData.image
-                : "https://i.pinimg.com/736x/25/98/2c/25982c2af2cca84c831a37dedfd15c66.jpg",
-            }}
-          />
+          <View style={styles.shadowWrapper}>
+            <Image
+              style={styles.playlistImage}
+              source={{
+                uri: playlistData.image
+                  ? playlistData.image
+                  : "https://i.pinimg.com/736x/25/98/2c/25982c2af2cca84c831a37dedfd15c66.jpg",
+              }}
+            />
+          </View>
           <Text style={styles.playlistTitle}>{playlistData.name}</Text>
         </View>
         <View style={styles.playbackContainer}>
           <View style={styles.playButtonContainer}>
             <AntDesign name="play" size={24} color="#FF006E" />
-            <Text style={{ color: "#FF006E" }}>Play</Text>
+            <Text style={{ color: "#FF006E", fontWeight: "bold" }}>Play</Text>
           </View>
           <View style={styles.shuffleButtonContainer}>
             <Entypo name="shuffle" size={24} color="#FF006E" />
-            <Text style={{ color: "#FF006E" }}>Shuffle</Text>
+            <Text style={{ color: "#FF006E", fontWeight: "bold" }}>
+              Shuffle
+            </Text>
           </View>
         </View>
         <Text style={styles.playlistDescription}>
@@ -150,6 +161,21 @@ export default function PlaylistScreen() {
 }
 
 const styles = StyleSheet.create({
+  shadowWrapper: {
+    borderRadius: 15,
+    backgroundColor: "#fff", // needed to render shadow properly on iOS
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.4,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
   headerContainer: {
     display: "flex",
     flexDirection: "row",
@@ -201,8 +227,8 @@ const styles = StyleSheet.create({
     fontWeight: 700,
   },
   playlistImage: {
-    width: 150,
-    height: 150,
+    width: 200,
+    height: 200,
     borderRadius: 15,
   },
   playlistDescription: {

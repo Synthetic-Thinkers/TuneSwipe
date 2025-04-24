@@ -1,5 +1,12 @@
 import { MaterialIcons } from "@expo/vector-icons";
-import { Text, View, StyleSheet, Image, ScrollView } from "react-native";
+import {
+  Text,
+  View,
+  StyleSheet,
+  Image,
+  ScrollView,
+  Platform,
+} from "react-native";
 import ArtistIcon from "@/components/profileScreen/ArtistIcon";
 import { SearchBar } from "@rneui/themed";
 import { Link } from "expo-router";
@@ -41,7 +48,7 @@ export default function dislikedSongs() {
         .in("spotifyID", uniqueArtistIDs);
 
       const songDataWithArtistNames = songData?.map((song) => {
-        const artistsName = song.artistsID.map((artistID:any) => {
+        const artistsName = song.artistsID.map((artistID: any) => {
           return artistData?.find((artist) => artist.spotifyID === artistID)
             ?.name;
         });
@@ -87,33 +94,44 @@ export default function dislikedSongs() {
                 <Ionicons name="chevron-back" size={24} color="black" />
               </Link>
             </Pressable>
-            <Text>Disliked Songs</Text>
+            <Text style={styles.header2}>Disliked Songs</Text>
           </View>
           <View style={styles.flexRow}>
-            <Ionicons name="filter-circle-outline" size={24} color="black" />
+            <Ionicons name="filter-circle-outline" size={30} color="black" />
           </View>
         </View>
         <SearchBar
-          placeholder="Type Here..."
+          placeholder="Search Songs"
           onChangeText={updateSearch}
           value={search}
-          containerStyle={{ flex: 1, borderRadius: 15 }}
+          platform={Platform.OS === "ios" ? "ios" : "android"}
+          searchIcon={<AntDesign name="search1" size={24} color="black" />}
+          showCancel={false}
+          clearIcon={<Text />}
+          containerStyle={{ backgroundColor: "#f0f0f0" }}
         />
-        <View style={styles.songContainer}>{songData.map(song => {
-          return (
-            <SongItem
-              key={song.id}
-              data={song}
-              onDelete={() => deleteDislikedSong(song.id)}
-            />
-          );
-        })}</View>
+        <View style={styles.songContainer}>
+          {songData
+            .filter((song) =>
+              song.name.toLowerCase().includes(search.toLowerCase())
+            )
+            .map((song) => (
+              <SongItem
+                key={song.id}
+                data={song}
+                onDelete={() => deleteDislikedSong(song.id)}
+              />
+            ))}
+        </View>
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  header2: {
+    fontSize: 20,
+  },
   songContainer: {
     flexDirection: "column",
     padding: 8,
@@ -133,5 +151,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     padding: 10,
+    paddingTop: 20
   },
 });

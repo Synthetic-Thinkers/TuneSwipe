@@ -27,6 +27,9 @@ import supabase from "@/app/utils/supabaseClient";
 import { Link, router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { fetchTracks, fetchUser } from "../../utils/spotifyUtils";
+import React, { useCallback } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { fetchArtists } from "../../utils/spotifyUtils";
 
 export default function ProfileScreen() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -35,75 +38,79 @@ export default function ProfileScreen() {
   const [user, setUser] = useState<any>(null);
   const [artistData, setArtistData] = useState<any[]>([]);
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const storedId = await AsyncStorage.getItem("spotifyID");
-        const storedAccessToken = await AsyncStorage.getItem("accessToken");
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true; // Optional: cancel logic for async calls
 
-        const { data: userData, error: userError } = await supabase
-          .from("User")
-          .select("*")
-          .eq("spotifyID", storedId)
-          .single();
+      async function fetchData() {
+        try {
+          const storedId = await AsyncStorage.getItem("spotifyID");
+          const storedAccessToken = await AsyncStorage.getItem("accessToken");
 
-        if (userError) {
-          throw userError;
-        } else {
+          const { data: userData, error: userError } = await supabase
+            .from("User")
+            .select("*")
+            .eq("spotifyID", storedId)
+            .single();
+
+          if (userError) throw userError;
+          if (!isActive) return;
+
           setUser(userData);
+
+          const artistIds = [
+            ...userData.likedArtists,
+            ...userData.dislikedArtists,
+          ];
+
+          await fetchArtists(artistIds).then((data) => {
+            setArtistData(data);
+            console.log("Profile: Fetched artists - ", data);
+          });
+
+          //Fetch avatar URL
+          const url = userData.avatarURL;
+          if (url) {
+            setAvatarUrl(url);
+          } else {
+            const userData: any = await fetchUser();
+            if (!isActive) return;
+
+            if (userData !== null) {
+              const profileImageUrl =
+                userData.images?.length > 0 ? userData.images[0].url : null;
+              setAvatarUrl(profileImageUrl);
+
+              await supabase
+                .from("User")
+                .update({ avatarURL: profileImageUrl })
+                .eq("spotifyID", storedId);
+            } else {
+              const defaultImageUrl =
+                "https://ierqhxlamotfahrwcsdz.supabase.co/storage/v1/object/public/" +
+                "avatars/default.png";
+
+              setAvatarUrl(defaultImageUrl);
+              await supabase
+                .from("User")
+                .update({ avatarURL: defaultImageUrl })
+                .eq("spotifyID", storedId);
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching data:", error);
         }
 
-        //Fetch all artist data related to a user's liked and disliked artists
-        const artistIds = [
-          ...userData.likedArtists,
-          ...userData.dislikedArtists,
-        ];
-        const { data: artistData, error: artistError } = await supabase
-          .from("Artist")
-          .select("*")
-          .in("id", artistIds);
-        if (artistError) {
-          throw artistError;
-        } else {
-          setArtistData(artistData);
-        }
-        console.log("Profile: Fetched artists - ", artistData);
-
-        // Fetch the avatar URL from Supabase
-        const url = userData.avatarURL;
-        if (url) {
-          setAvatarUrl(url);
-        }
-        // First time user trying fetching profile picture from spotify instead
-        else {
-          const userData: any = await fetchUser();
-          if (userData !== null) {
-            const profileImageUrl =
-              userData.images?.length > 0 ? userData.images[0].url : null;
-            setAvatarUrl(profileImageUrl);
-            await supabase
-              .from("User")
-              .update({ avatarURL: profileImageUrl })
-              .eq("spotifyID", storedId); 
-          }
-          else{ //No profile image found, set default image
-            const defaultImageUrl =
-              "https://ierqhxlamotfahrwcsdz.supabase.co/storage/v1/object/public/" +
-              "avatars/default.png";
-            setAvatarUrl(defaultImageUrl);
-            await supabase
-              .from("User")
-              .update({ avatarURL: defaultImageUrl })
-              .eq("spotifyID", storedId); 
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
+        if (isActive) setLoading(false);
       }
-      setLoading(false);
-    }
-    fetchData();
-  }, []);
+
+      fetchData();
+
+      return () => {
+        isActive = false; // cleanup if screen is unfocused before async call completes
+      };
+    }, [])
+  );
 
   const pickImage = async () => {
     try {
@@ -141,7 +148,7 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView>
-      <View>
+      <View style={{ padding: 5 }}>
         <View style={styles.profileInfoContainer}>
           <Pressable onPress={() => setIsPressed(!isPressed)}>
             <View style={styles.imageContainer}>
@@ -158,7 +165,7 @@ export default function ProfileScreen() {
                     <MenuOptions>
                       <MenuOption
                         onSelect={() => {
-                          alert("Change Background");
+                          alert("Change Theme");
                           setIsPressed(false);
                         }}
                       >
@@ -202,7 +209,7 @@ export default function ProfileScreen() {
         </View>
         <View style={styles.artistContainer}>
           <ScrollView horizontal={true} showsHorizontalScrollIndicator={false}>
-            {user.likedArtists.map((artistID: number) => (
+            {user.likedArtists.map((artistID: string) => (
               <ArtistIcon
                 data={artistData.find((artist) => artist.id === artistID)}
                 key={artistID}
@@ -233,7 +240,7 @@ export default function ProfileScreen() {
         </View>
         <View style={styles.artistContainer}>
           <ScrollView horizontal={true} showsHorizontalScrollIndicator={false}>
-            {user.dislikedArtists.map((artistID: number) => (
+            {user.dislikedArtists.map((artistID: string) => (
               <ArtistIcon
                 data={artistData.find((artist) => artist.id === artistID)}
                 key={artistID}
@@ -318,7 +325,7 @@ const styles = StyleSheet.create({
     padding: 6,
   },
   header2: {
-    fontSize: 16,
+    fontSize: 20,
   },
   icon: {},
   profileImage: {

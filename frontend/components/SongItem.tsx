@@ -43,7 +43,7 @@ const SongItem = ({
           )}
 
           <View style={styles.songInfoContainer}>
-            <Text ellipsizeMode="tail" numberOfLines={1} style={{ width:200 }}>{data.title}</Text>
+            <Text ellipsizeMode="tail" numberOfLines={1} style={{ width:200 }}>{data.name}</Text>
             <Text  ellipsizeMode="tail" numberOfLines={2} style={{ color: "#7E7E82", fontSize: 12, width:200 }}>{data.artistsName.join(", ")}</Text>
           </View>
         </View>

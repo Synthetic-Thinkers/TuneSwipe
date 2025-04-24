@@ -33,7 +33,8 @@ class Song(db.Model):
     id = db.Column(db.Text, primary_key=True)
     name = db.Column(db.Text)
     album = db.Column(db.Text)
-    artist_ids = db.Column(ARRAY(db.Text))  # PostgreSQL-specific ARRAY type
+    artist_ids = db.Column(ARRAY(db.Text))  
+    artists = db.Column(ARRAY(db.Text))  
     track_number = db.Column(db.Integer)
     disc_number = db.Column(db.Integer)
     explicit = db.Column(db.Boolean)
@@ -51,7 +52,7 @@ class Song(db.Model):
     duration_ms = db.Column(db.Integer)
     time_signature = db.Column(db.Float)
     year = db.Column(db.Integer)
-    release_date = db.Column(db.Text)
+
 
     def __repr__(self):
         return f"<Song {self.name} ({self.id})>"
@@ -59,6 +60,18 @@ class Song(db.Model):
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
+class Artist(db.Model):
+    __tablename__ = 'artists'
+
+    artist_id = db.Column(db.Text, primary_key=True)
+    artist_name = db.Column(db.Text)
+
+    def __repr__(self):
+        return f"<Artist {self.name} ({self.id})>"
+
+    def to_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+    
 #Get song by ID
 @app.route('/songs/<string:song_id>', methods=['GET'])
 def get_song_by_id(song_id):
@@ -73,7 +86,6 @@ def get_song_by_id(song_id):
             'track_number': song.track_number,
             'explicit': song.explicit,
             'year': song.year,
-            'release_date': song.release_date
             # Add more fields as needed
         })
     else:
@@ -96,7 +108,6 @@ def get_songs_by_ids():
             'album': song.album,
             'artist_ids': song.artist_ids,
             'year': song.year,
-            'release_date': song.release_date
         }
         for song in songs
     ])
@@ -111,7 +122,6 @@ def get_random_song():
             'album': song.album,
             'artist_ids': song.artist_ids,
             'year': song.year,
-            'release_date': song.release_date
         })
     else:
         return jsonify({'message': 'No songs found'}), 404
@@ -312,7 +322,26 @@ def logregression():
     top_30_ids = [results[i][0] for i in top_30_indices]
     
     return jsonify({"message": top_30_ids})
+
+@app.route('/artist-search', methods=['GET'])
+def get_artist_by_name():
+    query = request.args.get('query', '').lower()
+    if not query:
+        return jsonify({"error": "Query parameter is required"}), 400
+
+    artists = Artist.query.filter(Artist.artist_name.ilike(f'%{query}%')).all()
     
+    if artists:
+        return jsonify([artist.to_dict() for artist in artists]), 200
+    return jsonify([]), 200
+
+
+@app.route('/test', methods=['GET'])
+def get_random_artist():
+    artist = Artist.query.order_by(func.random()).first()
+    if artist:
+        return jsonify(artist.to_dict()), 200
+    return jsonify({"error": "No artist found"}), 404
 
 if __name__ == "__main__":
    app.run(host="0.0.0.0", port=5000, debug=True)

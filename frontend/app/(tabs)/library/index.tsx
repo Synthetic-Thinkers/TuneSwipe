@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { useEffect, useState, useContext } from "react";
 import {
   Text,
@@ -9,7 +9,9 @@ import {
   FlatList,
   Dimensions,
   ScrollView,
+  Platform,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import PlaylistItem from "../../../components/PlaylistItem";
 import { Link, router } from "expo-router";
@@ -21,36 +23,44 @@ export default function LibraryScreen() {
   const [playlists, setPlaylists] = useState<any[]>([]);
   const [user, setUser] = useState<any>(null);
 
-  useEffect(() => {
-    async function fetchData() {
-      const storedId = await AsyncStorage.getItem("spotifyID");
-      //Fetch user data from supabase using stored ID
-      const { data: userData, error: userError } = await supabase
-        .from("User")
-        .select("*")
-        .eq("spotifyID", storedId)
-        .single();
-  
-      if (userError) {
-        console.log(userError)
-      } 
-      else {
-        setUser(userData);
-        console.log(userData);
+  useFocusEffect(
+    useCallback(() => {
+      async function fetchData() {
+        const storedId = await AsyncStorage.getItem("spotifyID");
+
+        const { data: userData, error: userError } = await supabase
+          .from("User")
+          .select("*")
+          .eq("spotifyID", storedId)
+          .single();
+
+        if (userError) {
+          console.log(userError);
+        } else {
+          setUser(userData);
+          console.log(userData);
+        }
+
+        const { data: playlistData, error: playlistError } = await supabase
+          .from("Playlist")
+          .select("*")
+          .eq("createdBy", userData.id);
+
+        if (playlistError) {
+          console.error("Error fetching data:", playlistError);
+        } else {
+          setPlaylists(playlistData);
+          console.log("Library: Fetched playlists - ", playlistData);
+        }
       }
 
-      const { data:playlistData, error: playlistError } = await supabase.from("Playlist").select("*").eq("createdBy", userData.id);
+      fetchData();
 
-      if (playlistError) {
-        console.error("Error fetching data:", playlistError);
-      } else {
-        setPlaylists(playlistData);
-        console.log("Library: Fetched playlists - ", playlistData);
-      }
-    }
-
-    fetchData();
-  }, []);
+      return () => {
+        // Optional cleanup
+      };
+    }, [])
+  );
 
   const onPress = (item: any) => {
     console.log("Pressed:", item);
@@ -60,7 +70,7 @@ export default function LibraryScreen() {
     });
   };
 
-  const renderItem = (playlist:any) => (
+  const renderItem = (playlist: any) => (
     <TouchableHighlight
       onPress={() => onPress(playlist)} // Pass the playlist to onPress
       underlayColor="#70A7FF"
@@ -68,42 +78,46 @@ export default function LibraryScreen() {
       style={styles.playlistCard}
     >
       <View>
-        <Image
-          style={styles.playlistImage}
-          source={{
-            uri: playlist.image
-              ? playlist.image
-              : "https://i.pinimg.com/736x/25/98/2c/25982c2af2cca84c831a37dedfd15c66.jpg",
-          }}
-        />
+        <View style={styles.shadowWrapper}>
+          <Image
+            style={styles.playlistImage}
+            source={{
+              uri: playlist.image
+                ? playlist.image
+                : "https://i.pinimg.com/736x/25/98/2c/25982c2af2cca84c831a37dedfd15c66.jpg",
+            }}
+          />
+        </View>
         <Text style={styles.playlistTitle}>{playlist.name}</Text>
       </View>
     </TouchableHighlight>
   );
 
   return (
-    
     <ScrollView>
       <View style={styles.libraryContainer}>
         <View style={styles.headerContainer}>
           <Text style={styles.header2}>Recently Created Playlists</Text>
         </View>
-        {playlists.slice(-2).map((playlist) => (
-          <PlaylistItem
-            key={playlist.id} // Assuming each playlist has a unique id
-            onPress={() => onPress(playlist)}
-            title={playlist.name}
-            description={playlist.description}
-            imageUri={playlist.image}
-          />
-        ))}
+        {playlists
+          .slice(-2)
+          .reverse()
+          .map((playlist) => (
+            <PlaylistItem
+              key={playlist.id} // Assuming each playlist has a unique id
+              onPress={() => onPress(playlist)}
+              title={playlist.name}
+              description={playlist.description}
+              imageUri={playlist.image}
+            />
+          ))}
         <View style={styles.headerContainer}>
           <Text style={styles.header2}>Your Playlists</Text>
           <TouchableHighlight>
             <Link
               href={{
                 pathname: "/library/playlists",
-                params: { data: JSON.stringify(playlists) }, 
+                params: { data: JSON.stringify(playlists) },
               }}
             >
               <MaterialIcons
@@ -117,13 +131,10 @@ export default function LibraryScreen() {
         </View>
 
         <View style={styles.playlistContainer}>
-          {
-            playlists.map(playlist => {
-              const playlistIcon = renderItem(playlist);
-              return playlistIcon;
-            })
-          }
-
+          {playlists.map((playlist) => {
+            const playlistIcon = renderItem(playlist);
+            return playlistIcon;
+          })}
         </View>
       </View>
     </ScrollView>
@@ -135,12 +146,27 @@ const styles = StyleSheet.create({
     fontSize: 24,
     padding: 10,
   },
+  shadowWrapper: {
+    borderRadius: 8,
+    backgroundColor: "#fff", // needed to render shadow properly on iOS
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.4,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
   libraryContainer: {
     padding: 10,
   },
   playlistContainer: {
-    flexDirection: 'row', 
-    flexWrap: 'wrap', 
+    flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "space-evenly",
   },
   playlistImage: {
@@ -161,6 +187,7 @@ const styles = StyleSheet.create({
   playlistTitle: {
     fontSize: 16,
     textAlign: "center",
+    marginTop: 5,
   },
   headerContainer: {
     display: "flex",
