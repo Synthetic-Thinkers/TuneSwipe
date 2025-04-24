@@ -1,4 +1,6 @@
 import { Text, View, StyleSheet, Image, TouchableOpacity, FlatList, SafeAreaView, StatusBar, Dimensions, ActivityIndicator, Alert } from 'react-native';
+import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatlist';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState, useEffect } from 'react';
@@ -134,7 +136,7 @@ export default function ActivityScreen() {
   const fetchCurrentlyPlaying = async () => {
     if (!spotifyToken) {
       console.log("No Spotify token available");
-      setError("Spotify token not available");
+      //setError("Spotify token not available");
       return;
     }
 
@@ -195,8 +197,7 @@ export default function ActivityScreen() {
   // Fetch queue from Spotify
   const fetchQueue = async () => {
     if (!spotifyToken) {
-
-      console.log("No Spotify token available");
+      // console.log("No Spotify token available");
       return;
     }
 
@@ -975,10 +976,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   albumCover: {
-    width: SCREEN_WIDTH * 0.6,
-    height: SCREEN_WIDTH * 0.6,
+    width: SCREEN_WIDTH * 0.4,
+    height: SCREEN_WIDTH * 0.4,
     borderRadius: 10,
-    marginVertical: 10,
+    marginVertical: 5,
   },
   songTitle: {
     fontSize: 18,
@@ -1049,7 +1050,7 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   queueContainer: {
-    flex: 1,
+    flex: 2,
     backgroundColor: '#fff',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
