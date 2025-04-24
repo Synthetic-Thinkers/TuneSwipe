@@ -16,7 +16,7 @@ import { useLocalSearchParams } from "expo-router";
 import supabase from "../../utils/supabaseClient";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
-import { fetchArtists } from "../../utils/spotifyUtils";
+import { fetchTracks } from "../../utils/spotifyUtils";
 import {
   Menu,
   MenuOptions,
@@ -25,11 +25,12 @@ import {
 } from "react-native-popup-menu";
 import Feather from "@expo/vector-icons/Feather";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import SongItem from "@/components/SongItem";
 
-const addArtists = () => {
+const addSongs = () => {
   const [search, setSearch] = useState("");
   const [results, setResults] = useState([]);
-  const [artistData, setArtistData] = useState([]);
+  const [songData, setSongData] = useState<any[]>([]);
 
   const updateSearch = (search: string) => {
     setSearch(search);
@@ -38,9 +39,9 @@ const addArtists = () => {
   const handleSearchSubmit = async () => {
     try {
       const response = await fetch(
-        `${process.env.EXPO_PUBLIC_API_URL}/artist-search?query=${encodeURIComponent(
-          search
-        )}`
+        `${
+          process.env.EXPO_PUBLIC_API_URL
+        }/song-search?query=${encodeURIComponent(search)}`
       );
       const data = await response.json();
       console.log(data);
@@ -58,21 +59,21 @@ const addArtists = () => {
       .eq("spotifyID", storedId)
       .single();
 
-    const currentArray = userData.likedArtists || [];
+    const currentArray = userData.likedSongs || [];
     if (currentArray.includes(id)) {
-      console.log("Artist already liked");
+      console.log("Song already liked");
       return;
     }
     const updatedArray = [...currentArray, id];
     const { error: updateError } = await supabase
       .from("User")
-      .update({ likedArtists: updatedArray })
+      .update({ likedSongs: updatedArray })
       .eq("spotifyID", storedId);
 
     if (updateError) {
-      console.error("Error updating liked artists:", updateError);
+      console.error("Error updating liked songs:", updateError);
     } else {
-      console.log("Liked artists updated!");
+      console.log("Liked songs updated!");
     }
   };
 
@@ -85,30 +86,30 @@ const addArtists = () => {
       .eq("spotifyID", storedId)
       .single();
 
-    const currentArray = userData.dislikedArtists || [];
+    const currentArray = userData.dislikedSongs || [];
     if (currentArray.includes(id)) {
-      console.log("Artist already disliked");
+      console.log("Song already disliked");
       return;
     }
     const updatedArray = [...currentArray, id];
     const { error: updateError } = await supabase
       .from("User")
-      .update({ dislikedArtists: updatedArray })
+      .update({ dislikedSongs: updatedArray })
       .eq("spotifyID", storedId);
 
     if (updateError) {
-      console.error("Error updating liked artists:", updateError);
+      console.error("Error updating liked songs:", updateError);
     } else {
-      console.log("Disliked artists updated!");
+      console.log("Disliked songs updated!");
     }
   };
 
   useEffect(() => {
-    const artistIds = results.map((artist: any) => artist.artist_id);
-    if (artistIds.length !== 0) {
-      fetchArtists(artistIds).then((data) => {
-        console.log("Fetched artist data:", data);
-        setArtistData(data);
+    const songIds = results.map((song: any) => song.id);
+    if (songIds.length !== 0) {
+      fetchTracks(songIds).then((data) => {
+        console.log("Fetched songIds data:", data);
+        setSongData(data);
       });
     }
   }, [results]);
@@ -118,16 +119,16 @@ const addArtists = () => {
       <View style={styles.headerContainer}>
         <View style={styles.flexRow}>
           <Pressable>
-            <Link href="/profile">
+            <Link href="profile">
               <Ionicons name="chevron-back" size={24} color="black" />
             </Link>
           </Pressable>
-          <Text style={styles.header2}>Add Artists</Text>
+          <Text style={styles.header2}>Add Songs</Text>
         </View>
         <View style={styles.flexRow}></View>
       </View>
       <SearchBar
-        placeholder="Search Artists"
+        placeholder="Search Songs"
         onChangeText={updateSearch}
         value={search}
         platform={Platform.OS === "ios" ? "ios" : "android"}
@@ -137,44 +138,49 @@ const addArtists = () => {
         containerStyle={{ backgroundColor: "#f0f0f0" }}
         onSubmitEditing={handleSearchSubmit}
       />
-      {artistData.length > 0 ? (
+      {songData.length > 0 ? (
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {artistData.map((artist: any) => (
-            <View style={styles.artistContainer} key={artist.id}>
-              <View style={styles.flexRow}>
-                {artist.images && artist.images.length > 0 ? (
-                  <Image
-                    source={{ uri: artist.images[0].url }}
-                    style={styles.artistImage}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <Image
-                    source={require("../../../assets/images/default-profile-picture.png")} // path relative to this file
-                    style={styles.artistImage}
-                    resizeMode="cover"
-                  />
-                )}
-
-                <Text>{artist.name}</Text>
-              </View>
-              <Menu>
-                <MenuTrigger>
-                  <Feather name="more-horizontal" size={24} color="black" />
-                </MenuTrigger>
-                <MenuOptions>
-                  <MenuOption onSelect={() => addToLiked(artist.id)}>
-                    <Text style={{}}>Like</Text>
-                  </MenuOption>
-                  <MenuOption onSelect={() => addToDisliked(artist.id)}>
-                    <Text style={{}}>Dislike</Text>
-                  </MenuOption>
-                </MenuOptions>
-              </Menu>
-            </View>
+          {songData.map((song: any) => (
+            <SongItem
+              key={song.id}
+              data={song}
+              onLike={() => addToLiked(song.id)}
+              onDislike={() => addToDisliked(song.id)}
+            />
+            //   <View style={styles.artistContainer} key={song.id}>
+            //     <View style={styles.flexRow}>
+            //       {song.album.images && song.album.images.length > 0 ? (
+            //         <Image
+            //           source={{ uri: song.album.images[0].url }}
+            //           style={styles.artistImage}
+            //           resizeMode="cover"
+            //         />
+            //       ) : (
+            //         <Image
+            //           source={require("../../../assets/images/default-profile-picture.png")} // path relative to this file
+            //           style={styles.artistImage}
+            //           resizeMode="cover"
+            //         />
+            //       )}
+            //       <Text>{song.name}</Text>
+            //     </View>
+            //     <Menu>
+            //       <MenuTrigger>
+            //         <Feather name="more-horizontal" size={24} color="black" />
+            //       </MenuTrigger>
+            //       <MenuOptions>
+            //         <MenuOption onSelect={() => addToLiked(song.id)}>
+            //           <Text style={{}}>Like</Text>
+            //         </MenuOption>
+            //         <MenuOption onSelect={() => addToDisliked(song.id)}>
+            //           <Text style={{}}>Dislike</Text>
+            //         </MenuOption>
+            //       </MenuOptions>
+            //     </Menu>
+            //   </View>
           ))}
         </ScrollView>
       ) : (
@@ -225,4 +231,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default addArtists;
+export default addSongs;

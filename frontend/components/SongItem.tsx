@@ -15,13 +15,35 @@ import {
   MenuTrigger,
 } from "react-native-popup-menu";
 
-const SongItem = ({
-  data,
-  onDelete,
-}: {
-  data: any;
-  onDelete: Function;
-}) => {
+type Artist = {
+  name: string;
+};
+
+type Album = {
+  images: { url: string }[];
+};
+
+type SongData = {
+  name: string;
+  artists: Artist[];
+  album: Album;
+};
+
+type SongItemProps =
+  | {
+      data: SongData;
+      onDelete: () => void;
+      onLike?: never;
+      onDislike?: never;
+    }
+  | {
+      data: SongData;
+      onDelete?: never;
+      onLike: () => void;
+      onDislike: () => void;
+    };
+
+const SongItem = ({ data, onDelete, onLike, onDislike }: SongItemProps) => {
   return (
     <View>
       <View style={styles.songContainer}>
@@ -33,28 +55,53 @@ const SongItem = ({
             alignItems: "center",
           }}
         >
-          {data.imageUrl ? (
-            <Image source={{ uri: data.imageUrl }} style={styles.image} />
+          {data.album.images && data.album.images.length > 0 ? (
+            <Image
+              source={{ uri: data.album.images[0].url }}
+              style={styles.image}
+              resizeMode="cover"
+            />
           ) : (
             <Image
-              source={require("../assets/images/vinyl.jpg")}
+              source={require("../assets/images/vinyl.jpg")} // path relative to this file
               style={styles.image}
+              resizeMode="cover"
             />
           )}
 
           <View style={styles.songInfoContainer}>
-            <Text ellipsizeMode="tail" numberOfLines={1} style={{ width:200 }}>{data.name}</Text>
-            <Text  ellipsizeMode="tail" numberOfLines={2} style={{ color: "#7E7E82", fontSize: 12, width:200 }}>{data.artistsName.join(", ")}</Text>
+            <Text ellipsizeMode="tail" numberOfLines={1} style={{ width: 200 }}>
+              {data.name}
+            </Text>
+            <Text
+              ellipsizeMode="tail"
+              numberOfLines={2}
+              style={{ color: "#7E7E82", fontSize: 12, width: 200 }}
+            >
+              {data.artists.map(a => a.name).join(", ")}
+            </Text>
           </View>
         </View>
         <Menu>
           <MenuTrigger>
             <Feather name="more-horizontal" size={24} color="black" />
           </MenuTrigger>
+
           <MenuOptions>
-            <MenuOption onSelect={() => onDelete()}>
-              <Text style={{ color: "red" }}>Delete</Text>
-            </MenuOption>
+            {onDelete ? (
+              <MenuOption onSelect={() => onDelete()}>
+                <Text style={{ color: "red" }}>Delete</Text>
+              </MenuOption>
+            ) : (
+              <>
+                <MenuOption onSelect={() => onLike()}>
+                  <Text style={{ color: "green" }}>Like</Text>
+                </MenuOption>
+                <MenuOption onSelect={() => onDislike()}>
+                  <Text style={{ color: "orange" }}>Dislike</Text>
+                </MenuOption>
+              </>
+            )}
           </MenuOptions>
         </Menu>
       </View>

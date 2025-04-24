@@ -335,6 +335,18 @@ def get_artist_by_name():
         return jsonify([artist.to_dict() for artist in artists]), 200
     return jsonify([]), 200
 
+@app.route('/song-search', methods=['GET'])
+def get_song_by_name():
+    query = request.args.get('query', '').lower()
+    if not query:
+        return jsonify({"error": "Query parameter is required"}), 400
+
+    songs = Song.query.filter(Song.name.ilike(f'%{query}%')).all()
+    
+    if songs:
+        return jsonify([song.to_dict() for song in songs]), 200
+    return jsonify([]), 200
+
 
 @app.route('/test', methods=['GET'])
 def get_random_artist():

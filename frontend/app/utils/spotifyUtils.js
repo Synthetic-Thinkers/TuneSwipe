@@ -42,11 +42,21 @@ async function getAccessToken() {
 // Track IDs are passed as an array
 async function fetchTracks(trackIds) {
   try {
-    await getAccessToken(); // Ensure we have a valid token
-    const response = await spotifyApi.getTracks(trackIds);
-    return response.body.tracks; // Returns track details
+    await getAccessToken(); // Make sure token is fresh
+
+    const batchSize = 50;
+    const allTracks = [];
+
+    for (let i = 0; i < trackIds.length; i += batchSize) {
+      const batch = trackIds.slice(i, i + batchSize);
+      const response = await spotifyApi.getTracks(batch);
+      allTracks.push(...response.body.tracks);
+    }
+
+    return allTracks;
   } catch (error) {
     console.error('Error fetching tracks:', error);
+    return [];
   }
 }
 
