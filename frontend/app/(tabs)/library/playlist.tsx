@@ -15,6 +15,7 @@ import Entypo from "@expo/vector-icons/Entypo";
 import { Link } from "expo-router";
 import SongItem from "@/components/SongItem";
 import supabase from "@/app/utils/supabaseClient";
+import { fetchTracks } from "../../utils/spotifyUtils";
 
 export default function PlaylistScreen() {
   const { playlistId } = useLocalSearchParams(); // Retrieve the playlistId from navigation params
@@ -69,31 +70,12 @@ export default function PlaylistScreen() {
 
       // Step 2: Extract song IDs from the playlist data
       const songIds = playlistData.songs; // Assuming `songs` is an array of song IDs
-
-      // Step 3: Fetch the song data using the song IDs
-      const { data: songsData, error: songsError } = await supabase
-        .from("Song") // Replace with your actual table name
-        .select("*")
-        .in("id", songIds); // Fetch songs where the ID is in the songIds array
-
-      const artistIDs = songsData?.flatMap((song: any) => song.artistsID);
-      // // Remove duplicates (optional)
-      const uniqueArtistIDs = [...new Set(artistIDs)];
-
-      const { data: artistData } = await supabase
-        .from("Artist")
-        .select("*")
-        .in("spotifyID", uniqueArtistIDs);
-
-      const songDataWithArtistNames = songsData?.map((song) => {
-        const artistsName = song.artistsID.map((artistID: any) => {
-          return artistData?.find((artist) => artist.spotifyID === artistID)
-            ?.name;
+      if (songIds.length !== 0) {
+        fetchTracks(songIds).then((data) => {
+          console.log("Fetched songIds data:", data);
+          setSongsData(data);
         });
-        console.log(artistsName);
-        return { ...song, artistsName };
-      });
-      setSongsData(songDataWithArtistNames ? songDataWithArtistNames : []);
+      }
     }
 
     fetchData();

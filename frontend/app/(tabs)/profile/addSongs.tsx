@@ -119,7 +119,7 @@ const addSongs = () => {
       <View style={styles.headerContainer}>
         <View style={styles.flexRow}>
           <Pressable>
-            <Link href="profile">
+            <Link href="/profile">
               <Ionicons name="chevron-back" size={24} color="black" />
             </Link>
           </Pressable>
