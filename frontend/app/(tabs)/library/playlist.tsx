@@ -20,6 +20,7 @@ import {
   fetchTracks,
   startPlaylist,
   toggleShuffle,
+  removeTrackFromPlaylist
 } from "../../utils/spotifyUtils";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
@@ -73,10 +74,12 @@ export default function PlaylistScreen() {
     if (error) {
       console.error("Error deleting song:", error);
     } else {
-      console.log("Song deleted successfully");
       // Update the local state to reflect the changes
       setPlaylistData({ ...playlistData, songs: updatedSongs } as Playlist);
       setSongsData(songsData.filter((song) => song.id !== id)); // Update songsData state
+      //Remove track from Spotify playlist
+      await removeTrackFromPlaylist(playlistData?.spotifyIdPlaylist, id)
+      console.log("Song deleted successfully");
     }
   };
 

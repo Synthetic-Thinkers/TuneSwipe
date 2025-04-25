@@ -193,6 +193,24 @@ async function toggleShuffle(mode){
   });
 }
 
+async function removeTrackFromPlaylist(playlistId, trackID) {
+  try {
+    // Get the current snapshot_id of the playlist
+    const data = await spotifyApi.getPlaylist(playlistId);
+    const snapshotId = data.body.snapshot_id;
+    
+    // Prepare the track data and options with the snapshot_id
+    const tracks = [{ uri: `spotify:track:${trackID}` }];
+    const options = { snapshot_id: snapshotId };
+    
+    // Remove the track from the playlist using the snapshot_id
+    await spotifyApi.removeTracksFromPlaylist(playlistId, tracks, options);
+    
+  } catch (err) {
+    console.log('Something went wrong!', err);
+  }
+}
+
 /**
  * Fetches Spotify user profile using an access token.
  * @param {string} accessToken - Spotify OAuth access token.
@@ -210,4 +228,4 @@ async function fetchUser() {
 }
 
  
-export { toggleShuffle, startPlaylist, fetchAndStoreTracks, fetchTracks, fetchArtists, storeTracksInSupabase, storeArtistsInSupabase, fetchUser };
+export {removeTrackFromPlaylist, toggleShuffle, startPlaylist, fetchAndStoreTracks, fetchTracks, fetchArtists, storeTracksInSupabase, storeArtistsInSupabase, fetchUser };
