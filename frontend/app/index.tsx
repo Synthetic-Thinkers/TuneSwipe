@@ -39,6 +39,8 @@ export default function login() {
         	"streaming",
         	"user-read-email",
         	"user-read-private",
+			"playlist-modify-public",
+			"playlist-modify-private"
       ],
       usePKCE: false,
 	  redirectUri: process.env.EXPO_PUBLIC_REDIRECT_URL ?? " "

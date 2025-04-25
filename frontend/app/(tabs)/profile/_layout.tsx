@@ -9,6 +9,8 @@ export default function RootLayout() {
       <Stack.Screen name="dislikedArtists" options={{ headerShown: false }} />
       <Stack.Screen name="likedSongs" options={{ headerShown: false }} />
       <Stack.Screen name="dislikedSongs" options={{ headerShown: false }} />
+      <Stack.Screen name="addArtists" options={{ headerShown: false }} />
+      <Stack.Screen name="addSongs" options={{ headerShown: false }} />
     </Stack>
   );
 }

@@ -7,6 +7,7 @@ import {
   FlatList,
   Dimensions,
   ScrollView,
+  Platform,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { SearchBar } from "@rneui/themed";
@@ -15,10 +16,13 @@ import PlaylistItem from "@/components/PlaylistItem";
 import { Link } from "expo-router";
 import { router } from "expo-router";
 import { useLocalSearchParams } from "expo-router";
+import AntDesign from "@expo/vector-icons/AntDesign";
 
 export default function PlaylistsScreen() {
   const params = useLocalSearchParams();
-  const playlists = JSON.parse(Array.isArray(params.data) ? params.data[0] : params.data);
+  const playlists = JSON.parse(
+    Array.isArray(params.data) ? params.data[0] : params.data
+  );
   const [search, setSearch] = useState("");
 
   const updateSearch = (search: string) => {
@@ -40,18 +44,26 @@ export default function PlaylistsScreen() {
 
   return (
     <ScrollView>
-      <View style={{ padding: 16 }}>
-        <Link href="/library">
-          <Ionicons name="chevron-back" size={24} color="black" />
-        </Link>
+      <View style={{ padding: 5 }}>
         <View style={styles.headerContainer}>
-          <SearchBar
-            placeholder="Type Here..."
-            onChangeText={updateSearch}
-            value={search}
-            containerStyle={{ flex: 1, borderRadius: 15 }}
-          />
+          <Link href="/library">
+            <Ionicons name="chevron-back" size={24} color="black" />
+          </Link>
+          <Text style={styles.header2}>My Playlists</Text>
         </View>
+
+        <SearchBar
+          placeholder="Search Playlist"
+          onChangeText={updateSearch}
+          value={search}
+          platform={Platform.OS === "ios" ? "ios" : "android"}
+          searchIcon={<AntDesign name="search1" size={24} color="black" />}
+          clearIcon={<Text/>}
+          showCancel={false}
+          containerStyle={{backgroundColor: '#f0f0f0'}}
+          showLoading={false}
+
+        />
         <View>
           {filteredPlaylists.map((playlist: any) => (
             <PlaylistItem
@@ -74,5 +86,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: 10,
+    gap:10
+  },
+  header2: {
+    fontSize: 20,
   },
 });
