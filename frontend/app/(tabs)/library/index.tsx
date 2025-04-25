@@ -38,7 +38,6 @@ export default function LibraryScreen() {
           console.log(userError);
         } else {
           setUser(userData);
-          console.log(userData);
         }
 
         const { data: playlistData, error: playlistError } = await supabase
@@ -50,7 +49,6 @@ export default function LibraryScreen() {
           console.error("Error fetching data:", playlistError);
         } else {
           setPlaylists(playlistData);
-          console.log("Library: Fetched playlists - ", playlistData);
         }
       }
 
@@ -64,6 +62,7 @@ export default function LibraryScreen() {
 
   const onPress = (item: any) => {
     console.log("Pressed:", item);
+
     router.push({
       pathname: "/library/playlist",
       params: { playlistId: item.id }, // Pass the playlist ID (or entire item) as a parameter

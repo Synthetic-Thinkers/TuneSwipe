@@ -156,6 +156,42 @@ async function fetchAndStoreTracks(trackIds) {
   }
 }
 
+async function startPlaylist(accessToken, playlistId, deviceId = null) {
+  const endpoint = 'https://api.spotify.com/v1/me/player/play';
+  const playlistUri = `spotify:playlist:${playlistId}`;
+
+  const body = {
+    context_uri: playlistUri, // Example: "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M"
+  };
+
+  const url = deviceId ? `${endpoint}?device_id=${deviceId}` : endpoint;
+
+  const response = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (response.status === 204) {
+    console.log('Playback started successfully.');
+  } else {
+    const error = await response.json();
+    console.error('Failed to start playback:', error);
+  }
+}
+
+async function toggleShuffle(mode){
+  spotifyApi.setShuffle(mode)
+  .then(function() {
+    console.log('Shuffle is on.');
+  }, function  (err) {
+    //if the user making the request is non-premium, a 403 FORBIDDEN response code will be returned
+    console.log('Something went wrong!', err);
+  });
+}
 
 /**
  * Fetches Spotify user profile using an access token.
@@ -173,4 +209,5 @@ async function fetchUser() {
   }
 }
 
-export { fetchAndStoreTracks, fetchTracks, fetchArtists, storeTracksInSupabase, storeArtistsInSupabase, fetchUser };
+ 
+export { toggleShuffle, startPlaylist, fetchAndStoreTracks, fetchTracks, fetchArtists, storeTracksInSupabase, storeArtistsInSupabase, fetchUser };

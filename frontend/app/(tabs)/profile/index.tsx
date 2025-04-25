@@ -65,7 +65,7 @@ export default function ProfileScreen() {
 
           await fetchArtists(artistIds).then((data) => {
             setArtistData(data);
-            console.log("Profile: Fetched artists - ", data);
+          
           });
 
           //Fetch avatar URL

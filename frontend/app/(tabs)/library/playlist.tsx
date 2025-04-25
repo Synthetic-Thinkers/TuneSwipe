@@ -5,6 +5,7 @@ import {
   ScrollView,
   Image,
   Platform,
+  Pressable,
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
@@ -15,7 +16,8 @@ import Entypo from "@expo/vector-icons/Entypo";
 import { Link } from "expo-router";
 import SongItem from "@/components/SongItem";
 import supabase from "@/app/utils/supabaseClient";
-import { fetchTracks } from "../../utils/spotifyUtils";
+import { fetchTracks, startPlaylist, toggleShuffle } from "../../utils/spotifyUtils";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function PlaylistScreen() {
   const { playlistId } = useLocalSearchParams(); // Retrieve the playlistId from navigation params
@@ -27,11 +29,28 @@ export default function PlaylistScreen() {
     image: string;
     songs: number[];
     createdBy: any;
+    spotifyIdPlaylist: string;
   }
 
   const [playlistData, setPlaylistData] = useState<Playlist | null>(null);
   const [songsData, setSongsData] = useState<any[]>([]);
   const [artistData, setArtistData] = useState<any[]>([]);
+
+  const onPlay = async (playlistID:string) => {
+    console.log("Play button pressed", playlistID);
+    const accessToken = await AsyncStorage.getItem("accessToken");
+    await toggleShuffle(false);
+    await startPlaylist(accessToken, playlistID, );
+  };
+
+  const onShuffle = async (playlistID:string) => {
+    console.log("Shuffle button pressed");
+    const accessToken = await AsyncStorage.getItem("accessToken");
+    await toggleShuffle(true);
+    await startPlaylist(accessToken, playlistID, );
+
+  };
+
 
   const deleteSong = async (id: number) => {
     const updatedSongs = playlistData?.songs.filter(
@@ -72,7 +91,6 @@ export default function PlaylistScreen() {
       const songIds = playlistData.songs; // Assuming `songs` is an array of song IDs
       if (songIds.length !== 0) {
         fetchTracks(songIds).then((data) => {
-          console.log("Fetched songIds data:", data);
           setSongsData(data);
         });
       }
@@ -112,16 +130,20 @@ export default function PlaylistScreen() {
           <Text style={styles.playlistTitle}>{playlistData.name}</Text>
         </View>
         <View style={styles.playbackContainer}>
-          <View style={styles.playButtonContainer}>
-            <AntDesign name="play" size={24} color="#FF006E" />
-            <Text style={{ color: "#FF006E", fontWeight: "bold" }}>Play</Text>
-          </View>
-          <View style={styles.shuffleButtonContainer}>
-            <Entypo name="shuffle" size={24} color="#FF006E" />
-            <Text style={{ color: "#FF006E", fontWeight: "bold" }}>
-              Shuffle
-            </Text>
-          </View>
+          <Pressable onPress={()=> onPlay(playlistData.spotifyIdPlaylist)}>
+            <View style={styles.playButtonContainer}>
+              <AntDesign name="play" size={24} color="#FF006E" />
+              <Text style={{ color: "#FF006E", fontWeight: "bold" }}>Play</Text>
+            </View>
+          </Pressable>
+          <Pressable onPress={()=> onShuffle(playlistData.spotifyIdPlaylist)}>
+            <View style={styles.shuffleButtonContainer}>
+              <Entypo name="shuffle" size={24} color="#FF006E" />
+              <Text style={{ color: "#FF006E", fontWeight: "bold" }}>
+                Shuffle
+              </Text>
+            </View>
+          </Pressable>
         </View>
         <Text style={styles.playlistDescription}>
           {playlistData.description}
