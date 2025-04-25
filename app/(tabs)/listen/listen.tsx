@@ -68,7 +68,7 @@ export default function ListenScreen() {
   const [spotifyID, setSpotifyID] = useState<string | null>(null);
 
   // Default fallback image
-  const DEFAULT_IMAGE = require('../../../assets/images/placeholder/placeholder.jpg');
+  const DEFAULT_IMAGE = require('../../../assets/images/defaultImage.png');
 
   const debugAsyncStorage = async () => {
     try {
