@@ -13,6 +13,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+import Levenshtein
 
 load_dotenv()
 
@@ -329,7 +330,7 @@ def get_artist_by_name():
     if not query:
         return jsonify({"error": "Query parameter is required"}), 400
 
-    artists = Artist.query.filter(Artist.artist_name.ilike(f'%{query}%')).all()
+    artists = Artist.query.filter(Artist.artist_name.ilike(f'%{query}%')).limit(50).all()
     
     if artists:
         return jsonify([artist.to_dict() for artist in artists]), 200
@@ -341,7 +342,7 @@ def get_song_by_name():
     if not query:
         return jsonify({"error": "Query parameter is required"}), 400
 
-    songs = Song.query.filter(Song.name.ilike(f'%{query}%')).all()
+    songs = Song.query.filter(Song.name.ilike(f'%{query}%')).limit(50).all()
     
     if songs:
         return jsonify([song.to_dict() for song in songs]), 200

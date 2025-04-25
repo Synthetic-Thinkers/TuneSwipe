@@ -16,8 +16,18 @@ import Entypo from "@expo/vector-icons/Entypo";
 import { Link } from "expo-router";
 import SongItem from "@/components/SongItem";
 import supabase from "@/app/utils/supabaseClient";
-import { fetchTracks, startPlaylist, toggleShuffle } from "../../utils/spotifyUtils";
+import {
+  fetchTracks,
+  startPlaylist,
+  toggleShuffle,
+} from "../../utils/spotifyUtils";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  Menu,
+  MenuOptions,
+  MenuOption,
+  MenuTrigger,
+} from "react-native-popup-menu";
 
 export default function PlaylistScreen() {
   const { playlistId } = useLocalSearchParams(); // Retrieve the playlistId from navigation params
@@ -36,21 +46,19 @@ export default function PlaylistScreen() {
   const [songsData, setSongsData] = useState<any[]>([]);
   const [artistData, setArtistData] = useState<any[]>([]);
 
-  const onPlay = async (playlistID:string) => {
+  const onPlay = async (playlistID: string) => {
     console.log("Play button pressed", playlistID);
     const accessToken = await AsyncStorage.getItem("accessToken");
     await toggleShuffle(false);
-    await startPlaylist(accessToken, playlistID, );
+    await startPlaylist(accessToken, playlistID);
   };
 
-  const onShuffle = async (playlistID:string) => {
+  const onShuffle = async (playlistID: string) => {
     console.log("Shuffle button pressed");
     const accessToken = await AsyncStorage.getItem("accessToken");
     await toggleShuffle(true);
-    await startPlaylist(accessToken, playlistID, );
-
+    await startPlaylist(accessToken, playlistID);
   };
-
 
   const deleteSong = async (id: number) => {
     const updatedSongs = playlistData?.songs.filter(
@@ -114,7 +122,27 @@ export default function PlaylistScreen() {
           <Link href="/library">
             <Ionicons name="chevron-back" size={24} color="black" />
           </Link>
-          <Feather name="more-horizontal" size={24} color="black" />
+          <Menu>
+            <MenuTrigger>
+              <Feather name="more-horizontal" size={24} color="black" />
+            </MenuTrigger>
+            <MenuOptions>
+              <MenuOption
+                onSelect={() => {
+                  alert("Change Theme");
+                }}
+              >
+                <Text style={{ color: "black" }}>Edit</Text>
+              </MenuOption>
+              <MenuOption
+                onSelect={() => {
+                  alert("Change Theme");
+                }}
+              >
+                <Text style={{ color: "black" }}>Sort</Text>
+              </MenuOption>
+            </MenuOptions>
+          </Menu>
         </View>
         <View style={styles.playlistInfoContainer}>
           <View style={styles.shadowWrapper}>
@@ -130,13 +158,29 @@ export default function PlaylistScreen() {
           <Text style={styles.playlistTitle}>{playlistData.name}</Text>
         </View>
         <View style={styles.playbackContainer}>
-          <Pressable onPress={()=> onPlay(playlistData.spotifyIdPlaylist)}>
+          <Pressable
+            style={({ pressed }) => [
+              {
+                transform: pressed ? [{ translateY: 2 }] : [{ translateY: 0 }],
+                opacity: pressed ? 0.8 : 1,
+              },
+            ]}
+            onPress={() => onPlay(playlistData.spotifyIdPlaylist)}
+          >
             <View style={styles.playButtonContainer}>
               <AntDesign name="play" size={24} color="#FF006E" />
               <Text style={{ color: "#FF006E", fontWeight: "bold" }}>Play</Text>
             </View>
           </Pressable>
-          <Pressable onPress={()=> onShuffle(playlistData.spotifyIdPlaylist)}>
+          <Pressable
+            style={({ pressed }) => [
+              {
+                transform: pressed ? [{ translateY: 2 }] : [{ translateY: 0 }],
+                opacity: pressed ? 0.8 : 1,
+              },
+            ]}
+            onPress={() => onShuffle(playlistData.spotifyIdPlaylist)}
+          >
             <View style={styles.shuffleButtonContainer}>
               <Entypo name="shuffle" size={24} color="#FF006E" />
               <Text style={{ color: "#FF006E", fontWeight: "bold" }}>
