@@ -220,20 +220,35 @@ async function removeTrackFromPlaylist(playlistId, trackID) {
 const fetchPlaylistSongIDs = async (playlistId) => {
   try {
     // First, ensure access token is obtained
-    await getAccessToken(); 
+    await getAccessToken();
 
-    // Fetch playlist data
-    const playlistData = await spotifyApi.getPlaylistTracks(playlistId);
+    let trackIds = [];
+    let offset = 0;
+    let totalTracks = 1; // Initially set to 1 to enter the loop
 
-    // Extract track IDs from the playlist data
-    const trackIds = playlistData.body.items.map(item => item.track.id)
+    // Loop through the pages of tracks (each page has a max of 50 items)
+    while (offset < totalTracks) {
+      // Fetch playlist data with pagination using offset
+      const playlistData = await spotifyApi.getPlaylistTracks(playlistId, { offset: offset });
 
-    // Return an array of track IDs
+      // Extract track IDs from the playlist data
+      const currentTrackIds = playlistData.body.items.map(item => item.track.id);
+
+      // Append the current page of track IDs to the trackIds array
+      trackIds = trackIds.concat(currentTrackIds);
+
+      // Update the offset and totalTracks
+      offset += 50; // Move to the next page of results
+      totalTracks = playlistData.body.total; // Total number of tracks in the playlist
+    }
+
+    // Return the full list of track IDs
+    console.log('All Track IDs:', trackIds);
     return trackIds;
 
   } catch (error) {
     console.error('Error fetching playlist:', error);
-    return null;  // Return null in case of an error
+    return [];
   }
 };
 
