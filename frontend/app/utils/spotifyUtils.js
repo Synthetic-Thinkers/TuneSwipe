@@ -218,38 +218,56 @@ async function removeTrackFromPlaylist(playlistId, trackID) {
 }
 
 const fetchPlaylistSongIDs = async (playlistId) => {
+  //limit the number of tracks to 50
   try {
     // First, ensure access token is obtained
-    await getAccessToken();
+    await getAccessToken(); 
 
-    let trackIds = [];
-    let offset = 0;
-    let totalTracks = 1; // Initially set to 1 to enter the loop
+    // Fetch playlist data
+    const playlistData = await spotifyApi.getPlaylistTracks(playlistId);
 
-    // Loop through the pages of tracks (each page has a max of 50 items)
-    while (offset < totalTracks) {
-      // Fetch playlist data with pagination using offset
-      const playlistData = await spotifyApi.getPlaylistTracks(playlistId, { offset: offset });
+    // Extract track IDs from the playlist data
+    const trackIds = playlistData.body.items.map(item => item.track.id)
 
-      // Extract track IDs from the playlist data
-      const currentTrackIds = playlistData.body.items.map(item => item.track.id);
-
-      // Append the current page of track IDs to the trackIds array
-      trackIds = trackIds.concat(currentTrackIds);
-
-      // Update the offset and totalTracks
-      offset += 50; // Move to the next page of results
-      totalTracks = playlistData.body.total; // Total number of tracks in the playlist
-    }
-
-    // Return the full list of track IDs
-    console.log('All Track IDs:', trackIds);
+    // Return an array of track IDs
     return trackIds;
 
   } catch (error) {
     console.error('Error fetching playlist:', error);
-    return [];
+    return [];  // Return null in case of an error
   }
+  // try {
+  //   // First, ensure access token is obtained
+  //   await getAccessToken();
+
+  //   let trackIds = [];
+  //   let offset = 0;
+  //   let totalTracks = 1; // Initially set to 1 to enter the loop
+
+  //   // Loop through the pages of tracks (each page has a max of 50 items)
+  //   while (offset < totalTracks) {
+  //     // Fetch playlist data with pagination using offset
+  //     const playlistData = await spotifyApi.getPlaylistTracks(playlistId, { offset: offset });
+
+  //     // Extract track IDs from the playlist data
+  //     const currentTrackIds = playlistData.body.items.map(item => item.track.id);
+
+  //     // Append the current page of track IDs to the trackIds array
+  //     trackIds = trackIds.concat(currentTrackIds);
+
+  //     // Update the offset and totalTracks
+  //     offset += 50; // Move to the next page of results
+  //     totalTracks = playlistData.body.total; // Total number of tracks in the playlist
+  //   }
+
+  //   // Return the full list of track IDs
+  //   console.log('All Track IDs:', trackIds);
+  //   return trackIds;
+
+  // } catch (error) {
+  //   console.error('Error fetching playlist:', error);
+  //   return [];
+  // }
 };
 
 /**

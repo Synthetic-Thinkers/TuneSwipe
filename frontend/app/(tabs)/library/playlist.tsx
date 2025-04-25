@@ -21,7 +21,7 @@ import {
   startPlaylist,
   toggleShuffle,
   removeTrackFromPlaylist,
-  fetchPlaylistSongIDs
+  fetchPlaylistSongIDs,
 } from "../../utils/spotifyUtils";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
@@ -62,25 +62,10 @@ export default function PlaylistScreen() {
   };
 
   const deleteSong = async (id: number) => {
-    const updatedSongs = playlistData?.songs.filter(
-      (songID: number) => songID !== id
-    );
-    console.log("Updated songs", updatedSongs);
-    const { error } = await supabase
-      .from("Playlist")
-      .update({ songs: updatedSongs })
-      .eq("id", playlistData?.id);
-
-    if (error) {
-      console.error("Error deleting song:", error);
-    } else {
-      // Update the local state to reflect the changes
-      setPlaylistData({ ...playlistData, songs: updatedSongs } as Playlist);
-      setSongsData(songsData.filter((song) => song.id !== id)); // Update songsData state
-      //Remove track from Spotify playlist
-      await removeTrackFromPlaylist(playlistData?.spotifyIdPlaylist, id);
-      console.log("Song deleted successfully");
-    }
+    setSongsData(songsData.filter((song) => song.id !== id)); // Update songsData state
+    //Remove track from Spotify playlist
+    await removeTrackFromPlaylist(playlistData?.spotifyIdPlaylist, id);
+    console.log("Song deleted successfully");
   };
 
   useEffect(() => {
@@ -97,11 +82,14 @@ export default function PlaylistScreen() {
         return;
       }
       setPlaylistData(playlistData);
-      const songIds = await fetchPlaylistSongIDs(playlistData.spotifyIdPlaylist)// Fetch playlist contents from Spotify
-      
+      const songIds = await fetchPlaylistSongIDs(
+        playlistData.spotifyIdPlaylist
+      ); // Fetch playlist contents from Spotify
+
       if (songIds.length !== 0) {
         fetchTracks(songIds).then((data) => {
           setSongsData(data);
+          console.log(data[0].id);
         });
       }
     }
