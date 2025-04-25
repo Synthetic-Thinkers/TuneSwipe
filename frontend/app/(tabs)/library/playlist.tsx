@@ -20,7 +20,7 @@ import {
   fetchTracks,
   startPlaylist,
   toggleShuffle,
-  removeTrackFromPlaylist
+  removeTrackFromPlaylist,
 } from "../../utils/spotifyUtils";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
@@ -78,7 +78,7 @@ export default function PlaylistScreen() {
       setPlaylistData({ ...playlistData, songs: updatedSongs } as Playlist);
       setSongsData(songsData.filter((song) => song.id !== id)); // Update songsData state
       //Remove track from Spotify playlist
-      await removeTrackFromPlaylist(playlistData?.spotifyIdPlaylist, id)
+      await removeTrackFromPlaylist(playlistData?.spotifyIdPlaylist, id);
       console.log("Song deleted successfully");
     }
   };
@@ -120,7 +120,7 @@ export default function PlaylistScreen() {
 
   return (
     <ScrollView>
-      <View style={{ padding: 5 }}>
+      <View style={{ padding: 8 }}>
         <View style={styles.headerContainer}>
           <Link href="/library">
             <Ionicons name="chevron-back" size={24} color="black" />
@@ -161,36 +161,46 @@ export default function PlaylistScreen() {
           <Text style={styles.playlistTitle}>{playlistData.name}</Text>
         </View>
         <View style={styles.playbackContainer}>
-          <Pressable
-            style={({ pressed }) => [
-              {
-                transform: pressed ? [{ translateY: 2 }] : [{ translateY: 0 }],
-                opacity: pressed ? 0.8 : 1,
-              },
-            ]}
-            onPress={() => onPlay(playlistData.spotifyIdPlaylist)}
-          >
-            <View style={styles.playButtonContainer}>
-              <AntDesign name="play" size={24} color="#FF006E" />
-              <Text style={{ color: "#FF006E", fontWeight: "bold" }}>Play</Text>
-            </View>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [
-              {
-                transform: pressed ? [{ translateY: 2 }] : [{ translateY: 0 }],
-                opacity: pressed ? 0.8 : 1,
-              },
-            ]}
-            onPress={() => onShuffle(playlistData.spotifyIdPlaylist)}
-          >
-            <View style={styles.shuffleButtonContainer}>
-              <Entypo name="shuffle" size={24} color="#FF006E" />
-              <Text style={{ color: "#FF006E", fontWeight: "bold" }}>
-                Shuffle
-              </Text>
-            </View>
-          </Pressable>
+          <Link href="/" asChild>
+            <Pressable
+              style={({ pressed }) => [
+                {
+                  transform: pressed
+                    ? [{ translateY: 2 }]
+                    : [{ translateY: 0 }],
+                  opacity: pressed ? 0.8 : 1,
+                },
+              ]}
+              onPress={() => onPlay(playlistData.spotifyIdPlaylist)}
+            >
+              <View style={styles.playButtonContainer}>
+                <AntDesign name="play" size={24} color="#FF006E" />
+                <Text style={{ color: "#FF006E", fontWeight: "bold" }}>
+                  Play
+                </Text>
+              </View>
+            </Pressable>
+          </Link>
+          <Link href="/" asChild>
+            <Pressable
+              style={({ pressed }) => [
+                {
+                  transform: pressed
+                    ? [{ translateY: 2 }]
+                    : [{ translateY: 0 }],
+                  opacity: pressed ? 0.8 : 1,
+                },
+              ]}
+              onPress={() => onShuffle(playlistData.spotifyIdPlaylist)}
+            >
+              <View style={styles.shuffleButtonContainer}>
+                <Entypo name="shuffle" size={24} color="#FF006E" />
+                <Text style={{ color: "#FF006E", fontWeight: "bold" }}>
+                  Shuffle
+                </Text>
+              </View>
+            </Pressable>
+          </Link>
         </View>
         <Text style={styles.playlistDescription}>
           {playlistData.description}

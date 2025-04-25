@@ -3,12 +3,13 @@ import {
   View,
   Text,
   Image,
-  TouchableHighlight,
+  Pressable,
   StyleSheet,
   Platform,
 } from "react-native";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import { LinearGradient } from "expo-linear-gradient";
+import { useState } from "react";
 
 const PlaylistItem = ({
   onPress,
@@ -21,19 +22,27 @@ const PlaylistItem = ({
   description: string;
   imageUri: string;
 }) => {
+  const [pressed, setPressed] = useState(false);
+
+  const handlePressIn = () => setPressed(true);
+  const handlePressOut = () => setPressed(false);
   return (
     <LinearGradient
-    colors={[
+      colors={[
         "rgba(131, 56, 236, 0.5)",
         "rgba(255, 0, 110, 0.5)",
         "rgba(58, 134, 255, 0.5)",
         "rgba(152, 245, 225, 0.5)",
       ]}
-    start={{ x: 0, y: 0 }}
-    end={{ x: 1, y: 0 }}
-    style={[styles.linearGradient]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 0 }}
+      style={[styles.linearGradient, pressed && styles.pressedStyle]}
     >
-      <TouchableHighlight onPress={onPress} underlayColor="#70A7FF">
+      <Pressable
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+      >
         <View style={styles.newPlaylistContainer}>
           <View style={styles.newPlaylistTextContainer}>
             <Text style={styles.newPlaylistTitle}>{title}</Text>
@@ -51,7 +60,7 @@ const PlaylistItem = ({
             />
           </View>
         </View>
-      </TouchableHighlight>
+      </Pressable>
     </LinearGradient>
   );
 };
@@ -110,10 +119,13 @@ const styles = StyleSheet.create({
   linearGradient: {
     borderRadius: 20, // <-- Outer Border Radius
     margin: 5,
-            shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.4,
-        shadowRadius: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+  },
+  pressedStyle: {
+    transform: [{ translateY: 4 }, { translateX: 4 }], // Indent effect
   },
 });
 
