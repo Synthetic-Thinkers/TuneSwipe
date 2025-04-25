@@ -21,6 +21,7 @@ import {
   startPlaylist,
   toggleShuffle,
   removeTrackFromPlaylist,
+  fetchPlaylistSongIDs
 } from "../../utils/spotifyUtils";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
@@ -45,7 +46,6 @@ export default function PlaylistScreen() {
 
   const [playlistData, setPlaylistData] = useState<Playlist | null>(null);
   const [songsData, setSongsData] = useState<any[]>([]);
-  const [artistData, setArtistData] = useState<any[]>([]);
 
   const onPlay = async (playlistID: string) => {
     console.log("Play button pressed", playlistID);
@@ -97,9 +97,8 @@ export default function PlaylistScreen() {
         return;
       }
       setPlaylistData(playlistData);
-
-      // Step 2: Extract song IDs from the playlist data
-      const songIds = playlistData.songs; // Assuming `songs` is an array of song IDs
+      const songIds = await fetchPlaylistSongIDs(playlistData.spotifyIdPlaylist)// Fetch playlist contents from Spotify
+      
       if (songIds.length !== 0) {
         fetchTracks(songIds).then((data) => {
           setSongsData(data);

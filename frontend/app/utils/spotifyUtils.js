@@ -92,6 +92,7 @@ async function fetchArtists(artistIds) {
 
 // Function to store tracks in Supabase
 async function storeTracksInSupabase(trackData) {
+  await getAccessToken();
   const song = trackData.map(track => ({
     title: track.name || null,
     spotifyURL: track.external_urls.spotify || null,
@@ -116,6 +117,7 @@ async function storeTracksInSupabase(trackData) {
 
 // Function to store artists in Supabase
 async function storeArtistsInSupabase(artistData) {
+  await getAccessToken();
     const artists = artistData.map(artist => ({
         name: artist.name,
         genres: artist.genres || [],
@@ -141,6 +143,7 @@ async function storeArtistsInSupabase(artistData) {
 
 // Function to fetch and store tracks and their artists
 async function fetchAndStoreTracks(trackIds) {
+  await getAccessToken();
   const trackData = await fetchTracks(trackIds);
   if (trackData.length > 0) {
     await storeTracksInSupabase(trackData);
@@ -157,6 +160,7 @@ async function fetchAndStoreTracks(trackIds) {
 }
 
 async function startPlaylist(accessToken, playlistId, deviceId = null) {
+  await getAccessToken();
   const endpoint = 'https://api.spotify.com/v1/me/player/play';
   const playlistUri = `spotify:playlist:${playlistId}`;
 
@@ -184,6 +188,7 @@ async function startPlaylist(accessToken, playlistId, deviceId = null) {
 }
 
 async function toggleShuffle(mode){
+  await getAccessToken();
   spotifyApi.setShuffle(mode)
   .then(function() {
     console.log('Shuffle is on.');
@@ -195,6 +200,7 @@ async function toggleShuffle(mode){
 
 async function removeTrackFromPlaylist(playlistId, trackID) {
   try {
+    await getAccessToken();
     // Get the current snapshot_id of the playlist
     const data = await spotifyApi.getPlaylist(playlistId);
     const snapshotId = data.body.snapshot_id;
@@ -210,6 +216,26 @@ async function removeTrackFromPlaylist(playlistId, trackID) {
     console.log('Something went wrong!', err);
   }
 }
+
+const fetchPlaylistSongIDs = async (playlistId) => {
+  try {
+    // First, ensure access token is obtained
+    await getAccessToken(); 
+
+    // Fetch playlist data
+    const playlistData = await spotifyApi.getPlaylistTracks(playlistId);
+
+    // Extract track IDs from the playlist data
+    const trackIds = playlistData.body.items.map(item => item.track.id)
+
+    // Return an array of track IDs
+    return trackIds;
+
+  } catch (error) {
+    console.error('Error fetching playlist:', error);
+    return null;  // Return null in case of an error
+  }
+};
 
 /**
  * Fetches Spotify user profile using an access token.
@@ -228,4 +254,4 @@ async function fetchUser() {
 }
 
  
-export {removeTrackFromPlaylist, toggleShuffle, startPlaylist, fetchAndStoreTracks, fetchTracks, fetchArtists, storeTracksInSupabase, storeArtistsInSupabase, fetchUser };
+export {fetchPlaylistSongIDs, removeTrackFromPlaylist, toggleShuffle, startPlaylist, fetchAndStoreTracks, fetchTracks, fetchArtists, storeTracksInSupabase, storeArtistsInSupabase, fetchUser };
