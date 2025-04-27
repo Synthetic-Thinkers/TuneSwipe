@@ -137,9 +137,9 @@ def get_swipe_recommendations():
         # Only return song IDs
         song_ids = [song.id for song in songs]
 
-        return jsonify({"songs": song_ids}), 200
+        return jsonify(song_ids), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify([]), 500
     # try:
     #     user_info = request.get_json()
     #     preference_vector = user_info.get("preference")
@@ -217,9 +217,9 @@ def create_playlist():
         # Only return song IDs
         song_ids = [song.id for song in songs]
 
-        return jsonify({"songs": song_ids}), 200
+        return jsonify(song_ids), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify([]), 500
     
 @app.route('/cosinesim', methods=['GET'])
 def cosinesim():

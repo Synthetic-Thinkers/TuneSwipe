@@ -1,17 +1,34 @@
 import React, { useState, useRef, useEffect } from "react";
-import { View, Text, TextInput, StyleSheet, TouchableHighlight, TouchableOpacity, Image, ActivityIndicator, Alert } from "react-native";
-import ViewShot, { captureRef } from 'react-native-view-shot';
-import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from "@expo-google-fonts/inter";
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRoute } from '@react-navigation/native';
-import * as ImageManipulator from 'expo-image-manipulator';
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  TouchableHighlight,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+  Alert,
+} from "react-native";
+import ViewShot, { captureRef } from "react-native-view-shot";
+import {
+  useFonts,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+  Inter_800ExtraBold,
+} from "@expo-google-fonts/inter";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRoute } from "@react-navigation/native";
+import * as ImageManipulator from "expo-image-manipulator";
 import { supabase } from "@/supabase";
-import { DateTime } from 'luxon';
-import * as FileSystem from 'expo-file-system';
-import 'react-native-get-random-values';
-import { v4 as uuidv4 } from 'uuid';
-import { Buffer } from 'buffer';
-
+import { DateTime } from "luxon";
+import * as FileSystem from "expo-file-system";
+import "react-native-get-random-values";
+import { v4 as uuidv4 } from "uuid";
+import { Buffer } from "buffer";
+import { createPlaylist, addTracksToPlaylist } from "@/app/utils/spotifyUtils";
 
 type ActivityLog = {
   _id: number;
@@ -31,14 +48,13 @@ type RouteParams = {
 };
 
 export default function PlaylistScreen({ navigation }) {
-
   const route = useRoute();
-  const { likedCards, spotifyID, mode, activityLog, sessionID } = route.params;
-  const [text, setText] = useState('');
+  const { spotifyID, mode, activityLog, sessionID } = route.params;
+  const [text, setText] = useState("");
   const inputRef = React.useRef(null);
-  const viewShotRef = useRef<ViewShot>(null);
   const [gifLoaded, setGifLoaded] = useState(false);
   const [gifError, setGifError] = useState(false);
+  const [playlistSongs, setPlaylistSongs] = useState([])
 
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -49,126 +65,148 @@ export default function PlaylistScreen({ navigation }) {
   });
 
   useEffect(() => {
-  console.log("Received in playlist.tsx:", route.params?.likedCards);
+    const markSessionAsCompleted = async () => {
+      const { data, error } = await supabase
+        .from("User")
+        .select("activityLog")
+        .eq("spotifyID", spotifyID)
+        .single();
+
+      if (error) {
+        console.error("Error fetching user's activity log:", error.message);
+        return;
+      }
+
+      const updatedActivityLog = data?.activityLog?.map((log) =>
+        log._id === sessionID
+          ? {
+              ...log,
+              completedAt: DateTime.now()
+                .setZone("America/Los_Angeles")
+                .toISO(),
+            }
+          : log
+      );
+
+      const { error: updateError } = await supabase
+        .from("User")
+        .update({ activityLog: updatedActivityLog })
+        .eq("spotifyID", spotifyID);
+
+      if (updateError) {
+        console.error(
+          "Error updating activityLog with completedAt:",
+          updateError.message
+        );
+      } else {
+        console.log("Successfully updated completedAt for activity log!");
+      }
+    };
+
+    markSessionAsCompleted();
   }, []);
 
+  //Get playlist recommendation
   useEffect(() => {
-  const markSessionAsCompleted = async () => {
-    const { data, error } = await supabase
-      .from("User")
-      .select("activityLog")
-      .eq("spotifyID", spotifyID)
-      .single();
-
-    if (error) {
-      console.error("Error fetching user's activity log:", error.message);
-      return;
+    async function getRecommendations(){ 
+      try{
+        const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/create-playlist`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({activityLog, mode}), //send recent swipe results 
+        });
+        if (response.ok) {
+          const songIDs = await response.json();
+          console.log('Song IDs for the new playlist:', songIDs);
+          setPlaylistSongs(songIDs)
+        } else {
+          // If the response is not successful, log the error
+          const errorData = await response.json();
+          console.error('Error creating playlist:', errorData.error);
+          throw new Error(errorData.error);
+        }
+      }catch(error){
+        console.log(error)
+      }
     }
 
-    const updatedActivityLog = data?.activityLog?.map((log) =>
-      log._id === sessionID
-        ? { ...log, completedAt: DateTime.now().setZone('America/Los_Angeles').toISO() }
-        : log
-    );
-
-    const { error: updateError } = await supabase
-      .from("User")
-      .update({ activityLog: updatedActivityLog })
-      .eq("spotifyID", spotifyID);
-
-    if (updateError) {
-      console.error("Error updating activityLog with completedAt:", updateError.message);
-    } else {
-      console.log("Successfully updated completedAt for activity log!");
-    }
-  };
-
-  markSessionAsCompleted();
-  }, []);
+    getRecommendations()
+  },[])
 
   const uploadCoverToSupabase = async (uri: string, userID: string) => {
-  try {
-    const fileExt = uri.split('.').pop();
-    const fileName = `${uuidv4()}.${fileExt}`;
-    const path = `${userID}/${fileName}`;
-    const file = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
-    const { error } = await supabase.storage
-      .from('playlistImage')
-      .upload(path, Buffer.from(file, 'base64'), {
-        contentType: 'image/jpeg',
-        upsert: false,
+    try {
+      const fileExt = uri.split(".").pop();
+      const fileName = `${uuidv4()}.${fileExt}`;
+      const path = `${userID}/${fileName}`;
+      const file = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
       });
+      const { error } = await supabase.storage
+        .from("playlistImage")
+        .upload(path, Buffer.from(file, "base64"), {
+          contentType: "image/jpeg",
+          upsert: false,
+        });
 
-    if (error) throw error;
+      if (error) throw error;
 
-    return `https://ierqhxlamotfahrwcsdz.supabase.co/storage/v1/object/public/playlistImage/${path}`;
+      return `https://ierqhxlamotfahrwcsdz.supabase.co/storage/v1/object/public/playlistImage/${path}`;
     } catch (error) {
       console.error("Upload failed: ", error.message);
       return null;
     }
   };
 
-  const hasEnoughCards = likedCards.length >= 4;
-  let collageCards = []
-  if (hasEnoughCards) {
-    collageCards = likedCards.slice(0, 4);
-  };
-
   const onPressCreate = async () => {
-    if (text.trim() === '') {
-      Alert.alert("Playlist name required", "Please enter a name for your playlist.");
-      setText('');
+    if (text.trim() === "") {
+      Alert.alert(
+        "Playlist name required",
+        "Please enter a name for your playlist."
+      );
+      setText("");
       return;
     }
-    console.log('You created a new playlist!');
-    console.log('Playlist name: ', text);
-
-    let coverUri = null;
-
-    if (mode === 'songs' && hasEnoughCards && viewShotRef.current) {
-      try {
-        const uri = await viewShotRef.current.capture();
-        const manipulated = await ImageManipulator.manipulateAsync(
-          uri,
-          [{ resize: { width: 1080 } }],
-          { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
-        );
-        coverUri = manipulated.uri;
-      } catch (error) {
-        console.error("Error capturing collage:", error);
-      }
-    } else {
-      coverUri = 'https://ierqhxlamotfahrwcsdz.supabase.co/storage/v1/object/public/playlistImage//DefaultPlaylistCover.png';
-    }
-
-    let uploadedImageUrl = coverUri;
-    if (coverUri && coverUri.startsWith('file')) {
-      uploadedImageUrl = await uploadCoverToSupabase(coverUri, spotifyID);
-    }
-
-    const { data, error } = await supabase
-      .from('User')
-      .select('id')
-      .eq('spotifyID', spotifyID)
+    //Fetch user id 
+    const { data: user, error } = await supabase
+      .from("User")
+      .select("id")
+      .eq("spotifyID", spotifyID)
       .single();
     if (error) {
-      console.error('Error fetching user:', error);
+      console.error("Error fetching user:", error);
       return;
     }
+    const createdBy = user.id;
 
-    const createdBy = data.id;
+    let description = ""
+    //Create playlist on spotify
+    const response = await createPlaylist(text, description)
+    const spotifyPlaylistID = response.id
+    let coverUri =
+      "https://ierqhxlamotfahrwcsdz.supabase.co/storage/v1/object/public/playlistImage//DefaultPlaylistCover.png";
+    //Add songs to newly create playlist (TO DO)
+    addTracksToPlaylist(spotifyPlaylistID, playlistSongs)
+
+    let uploadedImageUrl = coverUri;
+    if (coverUri && coverUri.startsWith("file")) {
+      await uploadCoverToSupabase(coverUri, spotifyID);
+    }
 
     const { data: insertedPlaylist, error: playlistError } = await supabase
-      .from('Playlist')
+      .from("Playlist")
       .insert({
         name: text,
         createdBy: createdBy,
         songs: null,
-        timeCreated: DateTime.now().setZone('America/Los_Angeles').toISO(),
+        timeCreated: DateTime.now().setZone("America/Los_Angeles").toISO(),
         description: "",
-        image: uploadedImageUrl ?? 'https://ierqhxlamotfahrwcsdz.supabase.co/storage/v1/object/public/playlistImage//DefaultPlaylistCover.png',
+        image:
+          uploadedImageUrl ??
+          "https://ierqhxlamotfahrwcsdz.supabase.co/storage/v1/object/public/playlistImage//DefaultPlaylistCover.png",
         privacy: "public",
-        spotifyIdPlaylist: null,
+        spotifyIdPlaylist: spotifyPlaylistID,
       })
       .select()
       .single();
@@ -187,14 +225,15 @@ export default function PlaylistScreen({ navigation }) {
       .single();
 
     if (fetchError) {
-      console.error("Error fetching user activityLog for playlistId update:", fetchError.message);
+      console.error(
+        "Error fetching user activityLog for playlistId update:",
+        fetchError.message
+      );
       return;
     }
 
     const updatedLog = userWithLog.activityLog.map((log) =>
-      log._id === sessionID
-        ? { ...log, playlistId: insertedPlaylist.id }
-        : log
+      log._id === sessionID ? { ...log, playlistId: insertedPlaylist.id } : log
     );
 
     const { error: logUpdateError } = await supabase
@@ -203,12 +242,15 @@ export default function PlaylistScreen({ navigation }) {
       .eq("spotifyID", spotifyID);
 
     if (logUpdateError) {
-      console.error("Error updating playlistId in activityLog:", logUpdateError.message);
+      console.error(
+        "Error updating playlistId in activityLog:",
+        logUpdateError.message
+      );
     } else {
       console.log("Successfully updated playlistId in activityLog!");
     }
 
-    navigation.navigate('PlaylistPreview', {
+    navigation.navigate("PlaylistPreview", {
       playlistName: text,
       playlistCover: coverUri,
     });
@@ -217,18 +259,28 @@ export default function PlaylistScreen({ navigation }) {
   if (!fontsLoaded) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.text}>Loading your next vibe check... almost there!</Text>
-        {!gifLoaded && <ActivityIndicator size="large" color="#fff" style={{ marginBottom: 20 }} />}
+        <Text style={styles.text}>
+          Loading your next vibe check... almost there!
+        </Text>
+        {!gifLoaded && (
+          <ActivityIndicator
+            size="large"
+            color="#fff"
+            style={{ marginBottom: 20 }}
+          />
+        )}
 
         {gifError ? (
           <Image
             style={styles.turntableIcon}
-            source={require('../../../assets/images/TurnTable.png')}
+            source={require("../../../assets/images/TurnTable.png")}
           />
         ) : (
           <Image
             style={styles.turntableIcon}
-            source={{ uri: 'https://ierqhxlamotfahrwcsdz.supabase.co/storage/v1/object/public/assests//turntable.gif' }}
+            source={{
+              uri: "https://ierqhxlamotfahrwcsdz.supabase.co/storage/v1/object/public/assests//turntable.gif",
+            }}
             onLoad={() => setGifLoaded(true)}
             onError={() => {
               setGifLoaded(true);
@@ -240,35 +292,21 @@ export default function PlaylistScreen({ navigation }) {
     );
   }
 
-  // Render playlist cover based on mode
-  let playlistCover;
-
-  if (mode === 'songs' && hasEnoughCards) {
-    // If in Songs Mode and at least 4 cards are liked, show a 2x2 collage
-    playlistCover = (
-      <ViewShot ref={viewShotRef} options={{ format: "jpg", quality: 1.0 }}>
-        <View style={styles.collageContainer}>
-          {collageCards.map((card, index) => (
-            <Image key={index} source={{ uri: card.imageUrl }} style={styles.collageImage} />
-          ))}
-        </View>
-      </ViewShot>
-    );
-  } else {
-    // For Artists Mode or Genre Mode, or if not enough cards for Songs Mode , use the deafult playlist image
-    playlistCover = (
-      <Image
-        source={{ uri: 'https://ierqhxlamotfahrwcsdz.supabase.co/storage/v1/object/public/playlistImage//DefaultPlaylistCover.png'}}
-        style={styles.coverImage}
-      />
-    );
-  }
+  // For Artists Mode or Genre Mode, or if not enough cards for Songs Mode , use the deafult playlist image
+  const playlistCover = (
+    <Image
+      source={{
+        uri: "https://ierqhxlamotfahrwcsdz.supabase.co/storage/v1/object/public/playlistImage//DefaultPlaylistCover.png",
+      }}
+      style={styles.coverImage}
+    />
+  );
 
   return (
     <View style={styles.container}>
       <Text style={styles.text}>Give your playlist a name!</Text>
       <View style={styles.shadowContainer}>
-       {/* Render the playlist cover */}
+        {/* Render the playlist cover */}
         {playlistCover}
       </View>
       <TouchableOpacity
@@ -293,13 +331,17 @@ export default function PlaylistScreen({ navigation }) {
 
       {/* Underline */}
       <View style={styles.underline} />
-      <TouchableHighlight style={styles.button} onPress={onPressCreate} underlayColor='#70A7FF'>
+      <TouchableHighlight
+        style={styles.button}
+        onPress={onPressCreate}
+        underlayColor="#70A7FF"
+      >
         <LinearGradient
-          colors={['#3A86FF', '#FF1493', '#A134BE']}
+          colors={["#3A86FF", "#FF1493", "#A134BE"]}
           start={{ x: 0, y: 0 }} // Gradient starts from top-left
           end={{ x: 1, y: 1 }} // Gradient ends at bottom-right
           style={styles.gradientBackground}
-          locations={[ 0, 0.5, 1]}
+          locations={[0, 0.5, 1]}
         >
           <Text style={styles.buttonText}>Create</Text>
         </LinearGradient>
@@ -311,26 +353,26 @@ export default function PlaylistScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'flex-start',
-    alignItems: 'center',
+    justifyContent: "flex-start",
+    alignItems: "center",
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'white',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "white",
   },
   text: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
     fontSize: 20,
-    color: 'black',
+    color: "black",
     marginTop: 30,
   },
   turntableIcon: {
     flex: 1,
     width: 100,
     maxHeight: 102,
-    resizeMode: 'contain',
+    resizeMode: "contain",
   },
   coverImage: {
     width: 300,
@@ -341,11 +383,11 @@ const styles = StyleSheet.create({
   collageContainer: {
     width: 300,
     height: 300,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     marginTop: 20,
     borderRadius: 15,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   shadowContainer: {
     width: 300,
@@ -366,25 +408,25 @@ const styles = StyleSheet.create({
     height: 75,
     borderRadius: 75 / 2,
   },
-   button: {
+  button: {
     flexShrink: 0,
     borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     margin: 13,
   },
-   buttonText: {
-    color: '#ffff',
-    fontFamily: 'Inter_500Medium',
+  buttonText: {
+    color: "#ffff",
+    fontFamily: "Inter_500Medium",
     fontSize: 16,
   },
   gradientBackground: {
-  width: 121 ,
-  height: 50,
-  justifyContent: 'center',
-  alignItems: 'center',
-  borderRadius: 30,
-  opacity: 0.95,
+    width: 121,
+    height: 50,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 30,
+    opacity: 0.95,
   },
   underlineContainer: {
     paddingVertical: 10,
@@ -392,14 +434,14 @@ const styles = StyleSheet.create({
   },
   input: {
     fontSize: 20,
-    color: 'black',
+    color: "black",
     paddingHorizontal: 10,
-    textAlignVertical: 'top',
-    textAlign: 'center',
+    textAlignVertical: "top",
+    textAlign: "center",
   },
   underline: {
     height: 3,
-    backgroundColor: 'black',
+    backgroundColor: "black",
     width: 250,
   },
 });

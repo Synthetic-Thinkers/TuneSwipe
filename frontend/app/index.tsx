@@ -55,7 +55,6 @@ useEffect (() => {
 		try {
 		  const { access_token } = response.params;
 		  await AsyncStorage.setItem("accessToken", access_token);
-		  console.log("accessToken -> ", access_token);
 		  getUser(access_token);
 		  router.replace("/(tabs)/library");
 		} catch (error) {
@@ -71,8 +70,6 @@ useEffect (() => {
   }, [response]); // Ensure `response` is listed in dependencies
 
 const getUser = async (token: string) => {
-	console.log("-- From getUser --");
-
 	try{
 		const resultFromCall = await fetch(process.env.EXPO_PUBLIC_USER_DOMAIN ?? " ", {
 			method: "GET",
@@ -127,8 +124,6 @@ const getUser = async (token: string) => {
 };
 
 const getTopArtists = async (token: string, sID: string) => {
-	console.log("-- From getTopArtists --");
-
 	const allGenres: any[] = [];
 
 	try{
@@ -141,14 +136,11 @@ const getTopArtists = async (token: string, sID: string) => {
 		});
 		const jsonData = await resultFromCall.json();
 		const artistsID = jsonData.items.map((artistID: { id: any; }) => artistID.id);
-		console.log("Top 10 artists:", artistsID);
-		console.log("SpotifyID from getTopArtist: ", sID);
 
 		// Get users top genres. Genres are pull from the same API as top artists. The genres are those of the artists.
 		jsonData.items.forEach((item: { genres: any; }) => {
 			allGenres.push(...item.genres);
 		});
-		console.log("Users top genres: ", allGenres)
 
 		//Update User table
 		const{data, error} = await supabase
@@ -171,8 +163,6 @@ const getTopArtists = async (token: string, sID: string) => {
 };
 
 const getTopTracks = async (token: string, sID: string) => {
-	console.log("-- From getTopTracks --");
-
 	try{
 		const resultFromCall = await fetch("https://api.spotify.com/v1/me/top/tracks?limit=10", {
 			method: "GET",
@@ -183,8 +173,6 @@ const getTopTracks = async (token: string, sID: string) => {
 		});
 		const jsonData = await resultFromCall.json();
 		const tracksID = jsonData.items.map((trackID: { id: any; }) => trackID.id);
-		console.log("Top 10 tracks:", tracksID);
-		console.log("SpotifyID from getTopTracks: ", sID);
 
 		//Update User table
 		const{data, error} = await supabase
@@ -207,8 +195,6 @@ const getTopTracks = async (token: string, sID: string) => {
 }
 
 const getRecentTracks = async (token: string, sID: string) => {
-	console.log("-- From getRecentTracks --");
-
 	try{
 		const resultFromCall = await fetch("https://api.spotify.com/v1/me/player/recently-played?limit=20", {
 			method: "GET",
@@ -220,7 +206,6 @@ const getRecentTracks = async (token: string, sID: string) => {
 		const jsonData = await resultFromCall.json();
 
 		const recentTracksID = jsonData.items.map((item: {track: any; id: any; }) => item.track.id);
-		console.log("Top 20 recently played tracks:", recentTracksID);
 		
 		//Update User table
 		const{data, error} = await supabase

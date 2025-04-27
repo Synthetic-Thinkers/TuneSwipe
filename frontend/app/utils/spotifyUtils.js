@@ -213,10 +213,26 @@ async function removeTrackFromPlaylist(playlistId, trackID) {
     await spotifyApi.removeTracksFromPlaylist(playlistId, tracks, options);
     
   } catch (err) {
-    console.log('Something went wrong!', err);
+    console.log('Error removing track from playlist', err);
   }
 }
 
+async function addTracksToPlaylist(playlistId, trackIDs) {
+  try {
+    await getAccessToken(); // Ensure access token is valid
+
+    // Prepare the track data (Spotify URI format) for the array of track IDs
+    const tracks = trackIDs.map(trackID =>  `spotify:track:${trackID}`);
+    
+    console.log("Tracks to be inserted", tracks)
+    // Add the tracks to the playlist
+    const data = await spotifyApi.addTracksToPlaylist(playlistId, tracks);
+
+    console.log('Tracks added to playlist successfully!', data.body);
+  } catch (err) {
+    console.log('Error adding tracks to playlist!', err);
+  }
+}
 const fetchPlaylistSongIDs = async (playlistId) => {
   //limit the number of tracks to 50
   try {
@@ -270,6 +286,23 @@ const fetchPlaylistSongIDs = async (playlistId) => {
   // }
 };
 
+const createPlaylist = async (name, description) => {
+  try {
+    await getAccessToken(); // Set token
+    // Call Spotify Web API to create a new playlist for the user
+    const playlistData = await spotifyApi.createPlaylist(name, {
+      description: description,
+      public: true, // Set to true if you want the playlist to be public
+    });
+
+    console.log('Playlist created successfully!', playlistData.body);
+    return playlistData.body;
+  } catch (error) {
+    console.error('Error creating playlist:', error);
+  }
+};
+
+
 /**
  * Fetches Spotify user profile using an access token.
  * @param {string} accessToken - Spotify OAuth access token.
@@ -287,4 +320,4 @@ async function fetchUser() {
 }
 
  
-export {fetchPlaylistSongIDs, removeTrackFromPlaylist, toggleShuffle, startPlaylist, fetchAndStoreTracks, fetchTracks, fetchArtists, storeTracksInSupabase, storeArtistsInSupabase, fetchUser };
+export {addTracksToPlaylist, createPlaylist, fetchPlaylistSongIDs, removeTrackFromPlaylist, toggleShuffle, startPlaylist, fetchAndStoreTracks, fetchTracks, fetchArtists, storeTracksInSupabase, storeArtistsInSupabase, fetchUser };
