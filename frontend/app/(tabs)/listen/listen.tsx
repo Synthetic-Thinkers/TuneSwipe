@@ -742,9 +742,6 @@ export default function ListenScreen() {
       >
         {/* App Header */}
         <View style={styles.header}>
-          <Text style={styles.appTitle}>
-            <Text style={{ color: '#FFFFFF' }}>TuneSwipe</Text>
-          </Text>
           {spotifyToken && (
             <View style={styles.spotifyConnected}>
               <Ionicons name="musical-notes" size={16} color="#1DB954" />
