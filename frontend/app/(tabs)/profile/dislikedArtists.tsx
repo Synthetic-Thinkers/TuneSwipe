@@ -1,4 +1,11 @@
-import { Text, View, StyleSheet, Image, ScrollView } from "react-native";
+import {
+  Text,
+  View,
+  StyleSheet,
+  Image,
+  ScrollView,
+  Platform,
+} from "react-native";
 import ArtistIcon from "@/components/profileScreen/ArtistIcon";
 import { SearchBar } from "@rneui/themed";
 import { Link } from "expo-router";
@@ -7,6 +14,8 @@ import { useState, useEffect } from "react";
 import { Pressable } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import supabase from "../../utils/supabaseClient";
+import AntDesign from "@expo/vector-icons/AntDesign";
+import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 
 type Artist = {
   id: number;
@@ -53,36 +62,64 @@ export default function dislikedArtists() {
                 <Ionicons name="chevron-back" size={24} color="black" />
               </Link>
             </Pressable>
-            <Text>Disliked Artists</Text>
+            <Text style={styles.header2}>Disliked Artists</Text>
           </View>
           <View style={styles.flexRow}>
             <Pressable onPress={() => setIsEditing(!isEditing)}>
-              {!isEditing ? <Text>Edit</Text> : <Text style={{color:"#FF006E"}}>Done</Text>}
+              {!isEditing ? (
+                <Text style={styles.header2}>Edit</Text>
+              ) : (
+                <Text style={[{ color: "#FF006E" }, styles.header2]}>Done</Text>
+              )}
             </Pressable>
-            <Ionicons name="filter-circle-outline" size={24} color="black" />
+            <Pressable>
+              <Link
+                href={{
+                  pathname: "/profile/addArtists",
+                }}
+              >
+                <FontAwesome6 name="add" size={24} color="black" />
+              </Link>
+            </Pressable>
           </View>
         </View>
         <SearchBar
-          placeholder="Type Here..."
+          placeholder="Search Artists"
           onChangeText={updateSearch}
           value={search}
-          containerStyle={{ flex: 1, borderRadius: 15 }}
+          platform={Platform.OS === "ios" ? "ios" : "android"}
+          searchIcon={<AntDesign name="search1" size={24} color="black" />}
+          clearIcon={<Text />}
+          showCancel={false}
+          containerStyle={{ backgroundColor: "#f0f0f0" }}
         />
         <View style={styles.songContainer}>
-          {user.dislikedArtists.map((artistID: number) => (
-            <ArtistIcon
-              data={artistData.find((artist: Artist) => artist.id === artistID)}
-              key={artistID}
-              edit={isEditing}
-              onDelete={() => deleteDislikedArtist(artistID)}
-            />
-          ))}
+          {user.dislikedArtists
+            .map((artistID: number) =>
+              artistData.find((artist: Artist) => artist.id === artistID)
+            )
+            .filter(
+              (artist: Artist | undefined) =>
+                artist &&
+                artist.name.toLowerCase().includes(search.toLowerCase())
+            )
+            .map((artist: Artist) => (
+              <ArtistIcon
+                key={artist.id}
+                data={artist}
+                edit={isEditing}
+                onDelete={() => deleteDislikedArtist(artist.id)}
+              />
+            ))}
         </View>
       </View>
     </ScrollView>
   );
 }
 const styles = StyleSheet.create({
+  header2: {
+    fontSize: 20,
+  },
   songContainer: {
     flexDirection: "row",
     flexWrap: "wrap",

@@ -1,4 +1,11 @@
-import { Text, View, StyleSheet, Image, ScrollView } from "react-native";
+import {
+  Text,
+  View,
+  StyleSheet,
+  Image,
+  ScrollView,
+  Platform,
+} from "react-native";
 import ArtistIcon from "@/components/profileScreen/ArtistIcon";
 import { SearchBar } from "@rneui/themed";
 import { Link } from "expo-router";
@@ -8,6 +15,9 @@ import { Pressable } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import supabase from "../../utils/supabaseClient";
 import SongItem from "@/components/SongItem";
+import AntDesign from "@expo/vector-icons/AntDesign";
+import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
+import { fetchTracks } from "../../utils/spotifyUtils";
 
 export default function likedSongs() {
   const { user: userString } = useLocalSearchParams() as { user: string };
@@ -19,33 +29,10 @@ export default function likedSongs() {
   useEffect(() => {
     const fetchLikedSongs = async () => {
       //Fetch all disliked songs
-      const { data: songData } = await supabase
-        .from("Song")
-        .select("*")
-        .in("id", user.likedSongs);
-
-      console.log("Disliked Songs: ", songData);
-
-      const artistIDs = songData?.flatMap((song: any) => song.artistsID);
-      // // Remove duplicates (optional)
-      const uniqueArtistIDs = [...new Set(artistIDs)];
-
-      console.log("Disliked Song Screen: - Artist Ids", uniqueArtistIDs);
-
-      const { data: artistData } = await supabase
-        .from("Artist")
-        .select("*")
-        .in("spotifyID", uniqueArtistIDs);
-
-      const songDataWithArtistNames = songData?.map((song) => {
-        const artistsName = song.artistsID.map((artistID:any)=> {
-          return artistData?.find((artist) => artist.spotifyID === artistID)
-            ?.name;
-        });
-        console.log(artistsName);
-        return { ...song, artistsName };
+      await fetchTracks(user.likedSongs).then((data) => {
+        console.log("Fetched liked songs: ", data);
+        setSongData(data);
       });
-      setSongData(songDataWithArtistNames ? songDataWithArtistNames : []);
     };
 
     fetchLikedSongs();
@@ -55,10 +42,11 @@ export default function likedSongs() {
     setSearch(search);
   };
 
-  const deleteLikedSong = async (id: number) => {
+  const deleteLikedSong = async (id: string) => {
     const updatedLikedSongs = user.likedSongs.filter(
-      (songID: number) => songID !== id
+      (songID: string) => songID !== id
     );
+    console.log("Old SOngs", user.likedSongs);
     console.log("Updated songs", updatedLikedSongs);
     const { error } = await supabase
       .from("User")
@@ -70,7 +58,7 @@ export default function likedSongs() {
     } else {
       console.log("Song deleted successfully");
       // Update the local state to reflect the changes
-      setUser({ ...user, likedSongs: updatedLikedSongs });
+      setSongData(prevData => prevData.filter(song => song.id !== id));
     }
   };
 
@@ -84,33 +72,52 @@ export default function likedSongs() {
                 <Ionicons name="chevron-back" size={24} color="black" />
               </Link>
             </Pressable>
-            <Text>Liked Songs</Text>
+            <Text style={styles.header2}>Liked Songs</Text>
           </View>
           <View style={styles.flexRow}>
-            <Ionicons name="filter-circle-outline" size={24} color="black" />
+            <Pressable>
+              <Link
+                href={{
+                  pathname: "/profile/addSongs",
+                }}
+              >
+                <FontAwesome6 name="add" size={24} color="black" />
+              </Link>
+            </Pressable>
           </View>
         </View>
         <SearchBar
-          placeholder="Type Here..."
+          placeholder="Search Songs"
           onChangeText={updateSearch}
           value={search}
-          containerStyle={{ flex: 1, borderRadius: 15 }}
+          platform={Platform.OS === "ios" ? "ios" : "android"}
+          searchIcon={<AntDesign name="search1" size={24} color="black" />}
+          showCancel={false}
+          containerStyle={{ backgroundColor: "#f0f0f0" }}
+          clearIcon={<Text />}
         />
-        <View style={styles.songContainer}>{songData.map(song => {
-          return (
-            <SongItem
-              key={song.id}
-              data={song}
-              onDelete={() => deleteLikedSong(song.id)}
-            />
-          );
-        })}</View>
+        <View style={styles.songContainer}>
+          {songData
+            .filter((song) =>
+              song.name.toLowerCase().includes(search.toLowerCase())
+            )
+            .map((song) => (
+              <SongItem
+                key={song.id}
+                data={song}
+                onDelete={() => deleteLikedSong(song.id)}
+              />
+            ))}
+        </View>
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  header2: {
+    fontSize: 20,
+  },
   songContainer: {
     flexDirection: "column",
     padding: 8,
@@ -130,5 +137,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     padding: 10,
+    paddingTop: 20,
   },
 });
