@@ -302,25 +302,6 @@ export default function ListenScreen() {
     // Note: we return nothing here since the cleanup is handled in getTokenAndFetchData
   }, [spotifyToken]);
 
-  // Fetch data on component mount and when token changes
-  // useEffect(() => {
-  //   console.log("Spotify Token: ", spotifyToken);
-  //   const token = await AsyncStorage.getItem('accessToken');
-  //   if (token) {
-  //     fetchCurrentlyPlaying();
-      
-  //     // Set up polling to refresh data
-  //     const intervalId = setInterval(() => {
-  //       fetchCurrentlyPlaying();
-  //     }, 10000); // Every 10 seconds
-      
-  //     return () => clearInterval(intervalId);
-  //   } else {
-  //     // Fall back to Supabase data if no Spotify token
-  //     fetchSongsFromSupabase();
-  //   }
-  // }, [spotifyToken]);
-
   // Fallback: Fetch songs from Supabase
   const fetchSongsFromSupabase = async () => {
     try {
