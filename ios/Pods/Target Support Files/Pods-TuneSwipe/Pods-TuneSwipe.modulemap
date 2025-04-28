@@ -1,6 +1,0 @@
-module Pods_TuneSwipe {
-  umbrella header "Pods-TuneSwipe-umbrella.h"
-
-  export *
-  module * { export * }
-}
