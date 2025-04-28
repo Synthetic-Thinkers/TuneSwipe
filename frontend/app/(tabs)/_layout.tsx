@@ -47,7 +47,7 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name='index'
+          name='listen'
           options={{
             headerTitle: () => <CustomerHeader />,
             title: 'Listen',
