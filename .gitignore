@@ -39,3 +39,7 @@ yarn-error.*
 app-example
 .env
 .cache
+
+#android & ios
+android/
+ios/
