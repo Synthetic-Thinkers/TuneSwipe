@@ -148,7 +148,7 @@ export default function PlaylistScreen() {
           <Text style={styles.playlistTitle}>{playlistData.name}</Text>
         </View>
         <View style={styles.playbackContainer}>
-          <Link href="/" asChild>
+          <Link href="/(tabs)/listen/listen" asChild>
             <Pressable
               style={({ pressed }) => [
                 {
@@ -168,7 +168,7 @@ export default function PlaylistScreen() {
               </View>
             </Pressable>
           </Link>
-          <Link href="/" asChild>
+          <Link href="/(tabs)/listen/listen" asChild>
             <Pressable
               style={({ pressed }) => [
                 {

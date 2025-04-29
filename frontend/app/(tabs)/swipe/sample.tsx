@@ -24,7 +24,6 @@ const styles = StyleSheet.create({
       flex: 1,
       backgroundColor: "#25292e",
       justifyContent: "center", // Center content vertically
-    
     },
     button: {
       fontSize: 20,
@@ -34,7 +33,6 @@ const styles = StyleSheet.create({
     webview: {
         width: "100%", // Set custom width
         height: 300, // Set custom height
-        borderRadius: 10, // optional, looks nicer
       },
   });
   

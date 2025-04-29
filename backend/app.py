@@ -13,7 +13,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
-import Levenshtein
+from sklearn.preprocessing import StandardScaler
 
 load_dotenv()
 
@@ -136,7 +136,7 @@ def get_swipe_recommendations():
 
         # Only return song IDs
         song_ids = [song.id for song in songs]
-
+        print(song_ids)
         return jsonify(song_ids), 200
     except Exception as e:
         return jsonify([]), 500
@@ -209,58 +209,69 @@ def get_swipe_recommendations():
 
 @app.route('/create-playlist', methods=['POST'])
 def create_playlist():
-    try:
-        user_info = request.get_json()
+    data = request.get_json()
+    activityLog = data.get('activityLog', {})  # default to empty list
+    swipeResults = activityLog['swipeResults']
 
-        songs = Song.query.order_by(func.random()).limit(30).all()
+    liked_ids = [item['id'] for item in swipeResults if item['liked']]
 
-        # Only return song IDs
-        song_ids = [song.id for song in songs]
-
-        return jsonify(song_ids), 200
-    except Exception as e:
-        return jsonify([]), 500
-    
-@app.route('/cosinesim', methods=['GET'])
-def cosinesim():
-    results = db.session.query(
+    # Query liked song features
+    liked_song_features = db.session.query(
         Song.id,
         Song.danceability,
         Song.energy,
         Song.key,
         Song.loudness,
-        Song.mode,
         Song.speechiness,
         Song.acousticness,
         Song.instrumentalness,
         Song.liveness,
         Song.valence,
         Song.tempo,
-        Song.time_signature
+    ).filter(Song.id.in_(liked_ids)).all()
+
+    # Build numpy array of liked features (excluding ID)
+    liked_feature_vectors = np.array([row[1:] for row in liked_song_features])
+
+    # Compute average user profile
+    if len(liked_feature_vectors) == 0:
+        return {"error": "No liked songs to build user profile."}, 400
+
+    user_profile = liked_feature_vectors.mean(axis=0).reshape(1, -1)
+
+    # Query all songs in the database
+    all_song_features = db.session.query(
+        Song.id,
+        Song.danceability,
+        Song.energy,
+        Song.key,
+        Song.loudness,
+        Song.speechiness,
+        Song.acousticness,
+        Song.instrumentalness,
+        Song.liveness,
+        Song.valence,
+        Song.tempo,
     ).all()
-    target_ids = ["0qOnSQQF0yzuPWsXrQ9paz", "3bfqkspKABT4pPicm6wC9F"]
-    indices = [i for i, t in enumerate(results) if t[0] in target_ids]
-    matrix_data = [
-    song[1:]  # Exclude the first element (the 'id' column)
-    for song in results
-    ]
 
-    data_matrix = np.array(matrix_data)
-    
-    target_vector = data_matrix[indices[0]].reshape(1, -1)
-    print("Target Vector:", target_vector)
-    # Step 3: Compute cosine similarity
-    similarities = cosine_similarity(target_vector, data_matrix)[0]  # shape: (n_samples,)
+    # Build array of all features (and keep track of IDs)
+    all_ids = [row[0] for row in all_song_features]
+    all_vectors = np.array([row[1:] for row in all_song_features])
 
-    # Step 4: Get top 30 similar songs (excluding the song itself at index 0)
-    top_indices = np.argsort(similarities)[::-1][0:31]  # Skip index 0 (self)
+    # Compute cosine similarity
+    similarities = cosine_similarity(all_vectors, user_profile).flatten()
 
-    # Step 5: Return the top 30 song dicts (or IDs)
-    top_30_songs = [results[i] for i in top_indices]
-    
-    top_30_ids = [results[i][0] for i in top_indices]
-    
-    return jsonify({"songs":top_30_ids})
+    # Rank top 30 songs by similarity (excluding liked songs if desired)
+    ranked_indices = similarities.argsort()[::-1]
+
+    # Optionally exclude songs already rated
+    filtered_indices = [i for i in ranked_indices if all_ids[i] not in liked_ids]
+
+    # Get top 30 recommendations
+    top_30_ids = [all_ids[i] for i in filtered_indices[:30]]
+
+    # Return or use these IDs however you like
+    return jsonify(top_30_ids)
 
 @app.route('/logregression', methods=['GET'])
 def logregression():

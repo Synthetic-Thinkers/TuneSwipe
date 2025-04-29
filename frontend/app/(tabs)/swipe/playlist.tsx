@@ -115,7 +115,9 @@ export default function PlaylistScreen({ navigation }) {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({activityLog, mode}), //send recent swipe results 
+          body: JSON.stringify({
+            activityLog: activityLog[activityLog.length - 1]
+          }), //send recent swipe results 
         });
         if (response.ok) {
           const songIDs = await response.json();

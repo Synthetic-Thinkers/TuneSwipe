@@ -139,7 +139,6 @@ export default function ListenScreen() {
     }
 
     try {
-      console.log("Fetching currently playing song...");
       const response = await fetch('https://api.spotify.com/v1/me/player/currently-playing', {
         method: 'GET',
         headers: {
@@ -149,7 +148,6 @@ export default function ListenScreen() {
 
       // 204 means no content (nothing playing)
       if (response.status === 204) {
-        console.log("No track currently playing");
         setError("No song currently playing");
         setLoading(false);
         return;

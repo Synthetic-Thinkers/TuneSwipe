@@ -40,7 +40,11 @@ export default function RootLayout() {
         name="Sample"
         component={SampleScreen}
         options={{
-          title: "", // Custom title
+          title: "", // optional custom title
+          headerTintColor: "black", // <-- sets back button and icon color
+          headerStyle: {
+            backgroundColor: "white", // optional: match your screen background
+          },
         }}
       />
     </Stack.Navigator>
