@@ -8,6 +8,8 @@ import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_7
 import { useRoute } from '@react-navigation/native';
 import { supabase } from "@/supabase";
 import { BlurView } from "expo-blur";
+import axios from "axios";
+import { fetchTracks, fetchArtists } from "@/app/utils/spotifyUtils";
 
 type ActivityLog = {
   _id: number;
@@ -45,6 +47,7 @@ export default function SwipeScreen({ navigation }) {
   const likedCardsRef = useRef<any[]>([]);
   const [gifLoaded, setGifLoaded] = useState(false);
   const [gifError, setGifError] = useState(false);
+  const [likedArtists, setRandomArtists] = useState([]);
 
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -86,79 +89,73 @@ export default function SwipeScreen({ navigation }) {
     return allArtistsIds;
   };
 
-  const fetchArtistsDetails = async (artistsIDs, accessToken) => {
-    if (artistsIDs.length === 0) return;
+  // const fetchArtistsDetails = async (artistsIDs, accessToken) => {
+  //   if (artistsIDs.length === 0) return;
 
-    try {
-      const idsParam = artistsIDs.join(",");
+  //   try {
+  //     const idsParam = artistsIDs.join(",");
 
-      const response = await fetch(`https://api.spotify.com/v1/artists?ids=${idsParam}`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
+  //     const response = await fetch(`https://api.spotify.com/v1/artists?ids=${idsParam}`, {
+  //       headers: {
+  //         Authorization: `Bearer ${accessToken}`,
+  //       },
+  //     });
 
-      if (!response.ok) throw new Error("Failed to fetch artist details");
+  //     if (!response.ok) throw new Error("Failed to fetch artist details");
 
-      const data = await response.json();
+  //     const data = await response.json();
 
-      const artistNames = data.artists.map((artist) => artist.name);
-      console.log('Artists Names:', artistNames);
-      return artistNames;
-    } catch (error) {
-      console.error("Error fetching artist details from Spotify:", error);
-      return [];
-    }
-  };
+  //     const artistNames = data.artists.map((artist) => artist.name);
+  //     console.log('Artists Names:', artistNames);
+  //     return artistNames;
+  //   } catch (error) {
+  //     console.error("Error fetching artist details from Spotify:", error);
+  //     return [];
+  //   }
+  // };
 
   const fetchData = async () => {
     let data;
     if (mode === 'songs') {
-      const { data: songData, error } = await supabase
-        .from('Song')
-        .select('*')
-        .limit(10);
-      if (error) {
-        console.error("Error fetching songs:", error);
-        return;
+      try {
+      const userInfo ={}
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/swipe-recommendations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(userInfo), // Include the user info in the body
+      });
+      const songIDs = await response.json();
+      const songData = await fetchTracks(songIDs)
+      setMusicData(songData)
+      setLoading(false)
+      } catch (error) {
+      console.error("Error fetching search results:", error);
       }
-      data = songData;
-      console.log(data);
-
-      const artistsIDs = extractArtistsIds(data);
-
-      if (artistsIDs.length > 0 && accessToken) {
-        const artistNames = await fetchArtistsDetails(artistsIDs, accessToken);
-        console.log("Fetched artist names:", artistNames);
-
-        const updatedSongData = data.map((song) => {
-          const artistNamesForSong = song.artistsID.map((artistID) => {
-            const artistIndex = artistNames.findIndex((name, index) => artistID === artistsIDs[index]);
-            return artistIndex !== -1 ? artistNames[artistIndex] : "Unknown Artist";
-          });
-
-          const artistName = artistNamesForSong.join(", ") || "Unknown Artist";
-          return {
-            ...song,
-            artistName: artistName,
-          };
-        });
-        data = updatedSongData;
-        console.log('Updated Song Data:', data);
-      }
-      setLoading(false);
     } else if (mode === 'artists') {
-      const { data: artistData, error } = await supabase
-        .from('Artist')
-        .select('*')
-        .limit(10);
-      if (error) {
-        console.error('Error fetching artists:', error);
-        return;
-      }
-      data = artistData;
-      console.log(data);
-      setLoading(false);
+      try {
+        // Fetch random artists from the backend
+        const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/random-artists?user_id=${spotifyID}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+          if (!response.ok) {
+              throw new Error("Failed to fetch random artists");
+          }
+          const artistIDs = await response.json(); // Assuming the backend returns an array of artist IDs
+          console.log("Fetched artist IDs:", artistIDs);
+          // Fetch artist details using fetchArtists from spotifyUtils.js
+        const artistData = await fetchArtists(artistIDs);
+        console.log("Fetched artist data:", artistData);
+          setMusicData(artistData);
+          setLoading(false);
+        } catch (error) {
+            console.error("Error fetching artists:", error);
+        }
     } else if (mode === 'genres') {
       const { data: genreData, error } = await supabase
         .from('Genre')
@@ -170,9 +167,10 @@ export default function SwipeScreen({ navigation }) {
       }
       data = genreData;
       console.log(data);
+      setMusicData(data);
       setLoading(false);
     }
-    setMusicData(data || []);
+    // setMusicData(musicData || []);
   }
 
   const fetchActivityLogs = async () => {
@@ -228,59 +226,73 @@ export default function SwipeScreen({ navigation }) {
 
   const handleSwipeRight = (cardIndex) => {
     // Every song swiped right will also be stored in an array for playlist.tsx (default for now)
-    const likedCard = musicData[cardIndex];
+    const likedCard = musicData[cardIndex].id;
+    // Add the liked card to the likedCards array
     setLikedCards((prevLikedCards) => [...prevLikedCards, likedCard]);
 
-    console.log(`Liked: ${musicData[cardIndex].title || musicData[cardIndex].name}`);
+    console.log("Liked Cards Array:", likedCardsRef.current);
+
+    console.log(
+      `Liked: ${musicData[cardIndex].name}`
+    );
     setSwipeResults((prevResults) => {
-    const newResults = [...prevResults, { id: musicData[cardIndex].id, liked: true }];
-    return newResults;
-  });
+      const newResults = [
+        ...prevResults,
+        { id: musicData[cardIndex].id, liked: true },
+      ];
+      return newResults;
+    });
   };
 
   const handleSwipeLeft = (cardIndex) => {
-    console.log(`Disliked: ${musicData[cardIndex].title || musicData[cardIndex].name}`);
+    console.log(
+      `Disliked: ${musicData[cardIndex].name}`
+    );
     setSwipeResults((prevResults) => {
-    const newResults = [...prevResults, { id: musicData[cardIndex].id, liked: false }];
-    return newResults;
-  });
+      const newResults = [
+        ...prevResults,
+        { id: musicData[cardIndex].id, liked: false },
+      ];
+      return newResults;
+    });
   };
 
   const handleSwipedAll = async () => {
     setLoading(true);
     setTimeout(async () => {
-    // pull latest update from swipeResults
-    const latestSwipeResults = [...swipeResultsRef.current];
-    const latestLikedCards = [...likedCardsRef.current];
+      // pull latest update from swipeResults
+      const latestSwipeResults = [...swipeResultsRef.current];
 
-    console.log('LATEST SWIPE RESULTS:', latestSwipeResults);
-    console.log('LATEST LIKED CARDS:', latestLikedCards);
+      console.log("LATEST SWIPE RESULTS:", latestSwipeResults);
+      console.log("LIKED CARDS:", likedCardsRef.current);
 
-    if (latestSwipeResults.length === musicData.length) {
-      const updatedLogs = activityLogs.map((log) =>
-        log._id === sessionID ? { ...log, swipeResults: latestSwipeResults } : log
-      );
+      if (latestSwipeResults.length === musicData.length) {
+        const updatedLogs = activityLogs.map((log) =>
+          log._id === sessionID
+            ? { ...log, swipeResults: latestSwipeResults }
+            : log
+        );
 
-      try {
-        const { error } = await supabase
-          .from('User')
-          .update({ activityLog: updatedLogs })
-          .eq('spotifyID', spotifyID);
+        try {
+          const { error } = await supabase
+            .from("User")
+            .update({ activityLog: updatedLogs })
+            .eq("spotifyID", spotifyID);
 
-        if (error) throw error;
+          if (error) throw error;
 
-        navigation.navigate('Playlist', {
-          likedCards: latestLikedCards,
-          spotifyID: spotifyID,
-          mode: mode,
-          activityLog: updatedLogs,
-          sessionID: sessionID,
-        });
-      } catch (error) {
-        console.error('Error saving updated activity log:', error);
+          navigation.navigate("Playlist", {
+            spotifyID: spotifyID,
+            mode: mode,
+            activityLog: updatedLogs,
+            sessionID: sessionID,
+            likedCards: likedCardsRef.current,
+          });
+        } catch (error) {
+          console.error("Error saving updated activity log:", error);
+        }
       }
-    }
-  }, 1000);
+    }, 1000);
   };
 
   const onPressStart = () => setShowBlur(false);
@@ -294,8 +306,12 @@ export default function SwipeScreen({ navigation }) {
           <>
             <View style={styles.startCardContainer}>
               <Image
-               source={firstCard.imageUrl ? { uri: firstCard.imageUrl } : require('../../../assets/images/defaultImage.png')}
-               style={styles.image}
+                source={
+                  mode=='songs' && firstCard.album.images[0]
+                    ? { uri: firstCard.album.images[0].url }
+                    : require("../../../assets/images/defaultImage.png")
+                }
+                style={styles.image}
               />
               <View style={styles.textContainer}>
                   {mode === 'songs' ? (
@@ -336,35 +352,52 @@ export default function SwipeScreen({ navigation }) {
             cards={musicData}
             renderCard={(card) => (
               <View style={styles.cardContainer}>
-                {mode === 'songs' ? (
-                  card.imageUrl ? (
-                    <Image source={{ uri: card.imageUrl }} style={styles.image} />
+                {mode === "songs" ? (
+                  card.album.images[0] ? (
+                    <Image
+                      source={{ uri: card.album.images[0].url }}
+                      style={styles.image}
+                    />
                   ) : (
-                    <Image source={require('../../../assets/images/defaultImage.png')} style={styles.image} />
+                    <Image
+                      source={require("../../../assets/images/defaultImage.png")}
+                      style={styles.image}
+                    />
                   )
-                ) : mode === 'artists' ? (
+                ) : mode === "artists" ? (
                   card.imageUrl ? (
-                    <Image source={{ uri: card.imageUrl }} style={styles.image} />
+                    <Image
+                      source={{ uri: card.imageUrl }}
+                      style={styles.image}
+                    />
                   ) : (
-                    <Image source={require('../../../assets/images/defaultImage.png')} style={styles.image} />
+                    <Image
+                      source={require("../../../assets/images/defaultImage.png")}
+                      style={styles.image}
+                    />
                   )
-                ) : mode === 'genres' ? (
+                ) : mode === "genres" ? (
                   card.image ? (
                     <Image source={{ uri: card.image }} style={styles.image} />
                   ) : (
-                    <Image source={require('../../../assets/images/defaultImage.png')} style={styles.image} />
+                    <Image
+                      source={require("../../../assets/images/defaultImage.png")}
+                      style={styles.image}
+                    />
                   )
                 ) : null}
                 <View style={styles.textContainer}>
-                  {mode === 'songs' ? (
+                  {mode === "songs" ? (
                     <Text style={styles.songText}>
-                      {card.artistName} - {card.title}
+                      {card.artists.map(artist => artist.name).join(", ")} - {card.name}
                     </Text>
                   ) : (
                     <Text style={styles.songText}>{card.name}</Text>
                   )}
-                  {mode !== 'genres' && firstCard.genres && (
-                    <Text style={styles.genreText}>{firstCard.genres.join(' + ')}</Text>
+                  {mode !== "genres" && card.genres && (
+                    <Text style={styles.genreText}>
+                      {card.genres.join(" + ")}
+                    </Text>
                   )}
                 </View>
                 <View style={styles.choiceContainer}>

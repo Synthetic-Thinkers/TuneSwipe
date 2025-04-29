@@ -5,6 +5,7 @@ import { useFonts, Inter_400Regular, Inter_600SemiBold } from '@expo-google-font
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../../supabase';
+import axios from 'axios';
 
 type ActivityLog = {
   id: string;

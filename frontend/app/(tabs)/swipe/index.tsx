@@ -6,11 +6,31 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { supabase } from '../../../supabase';
-
+import axios from 'axios';
 
 export default function IndexScreen({ navigation }) {
   const [spotifyID, setSpotifyID] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
+  const [recentTracks, setRecentTracks] = useState<any[]>([]);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function getToken() {
+      try {
+        const token = await AsyncStorage.getItem("accessToken");
+        if (token) {
+          console.log('Token:', token);
+          setAccessToken(token);
+        } else {
+          console.log("No Token Found.")
+        }
+      } catch (error) {
+        console.error("Error retrieving Token:", error);
+      }
+    }
+
+    getToken();
+  }, []);
 
   useEffect(() => {
   async function fetchUser() {
@@ -50,8 +70,62 @@ export default function IndexScreen({ navigation }) {
     }
 
     getUser();  // Fetch user when spotifyID is available
+
+    // Fetch recent tracks after fetching user info
+    async function getRecentTracks() {
+      const { data, error } = await supabase
+        .from("User")
+        .select("recentlyPlayed")
+        .eq("spotifyID", spotifyID);
+
+      if (error) {
+        console.error("Error fetching recent tracks:", error);
+      } else if (data) {
+        const tracks = data[0]?.recentlyPlayed || [];
+        setRecentTracks(tracks);
+        console.log("Fetched recent tracks: ", data[0]?.recentlyPlayed || []);
+      } else {
+        console.log("No recent tracks found for this Spotify ID.");
+      }
+    }
+    getRecentTracks();
   }
-}, [spotifyID]);
+  }, [spotifyID]);
+
+  useEffect(() => {
+
+    async function getTrackInfo(recentTracks, accessToken) {
+      console.log("Access Token:", accessToken);
+      console.log("Recent Tracks:", recentTracks);
+      const url = `https://api.spotify.com/v1/tracks?ids=${recentTracks.join(',')}`;
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) throw new Error("Failed to fetch artist details");
+
+      const data = await response.json();
+      const artists = data.tracks.map(track => {
+        return track.artists.map(artist => artist.name);
+      });
+      console.log(artists)
+
+      // Send recent tracks to backend
+      try {
+        const response = await axios.post("http://192.168.1.16:5000/recent-tracks", {
+          user_id: spotifyID,
+          artists: artists,
+        });
+        console.log("Backend response:", response.data);
+      } catch (error) {
+        console.error("Error sending data to backend:", error);
+      }
+    }
+    getTrackInfo(recentTracks, accessToken);
+  }, [recentTracks, accessToken]);
 
   const onPressStart = () => navigation.replace("Options", {
     spotifyID: spotifyID,

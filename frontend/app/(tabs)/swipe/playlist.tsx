@@ -11,7 +11,7 @@ import * as FileSystem from 'expo-file-system';
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
 import { Buffer } from 'buffer';
-
+import { createPlaylist, addTracksToPlaylist } from "@/app/utils/spotifyUtils";
 
 type ActivityLog = {
   _id: number;
@@ -39,6 +39,7 @@ export default function PlaylistScreen({ navigation }) {
   const viewShotRef = useRef<ViewShot>(null);
   const [gifLoaded, setGifLoaded] = useState(false);
   const [gifError, setGifError] = useState(false);
+  const [playlistSongs, setPlaylistSongs] = useState([])
 
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -86,6 +87,35 @@ export default function PlaylistScreen({ navigation }) {
   markSessionAsCompleted();
   }, []);
 
+  //Get playlist recommendation
+  useEffect(() => {
+    async function getRecommendations(){
+      try{
+        const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/generate-playlist`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ liked_artists: likedCards }), //send recent swipe results
+        });
+        if (response.ok) {
+          const songIDs = await response.json();
+          console.log('Song IDs for the new playlist:', songIDs);
+          setPlaylistSongs(songIDs)
+        } else {
+          // If the response is not successful, log the error
+          const errorData = await response.json();
+          console.error('Error creating playlist:', errorData.error);
+          throw new Error(errorData.error);
+        }
+      }catch(error){
+        console.log(error)
+      }
+    }
+
+    getRecommendations()
+  },[])
+
   const uploadCoverToSupabase = async (uri: string, userID: string) => {
   try {
     const fileExt = uri.split('.').pop();
@@ -115,60 +145,53 @@ export default function PlaylistScreen({ navigation }) {
   };
 
   const onPressCreate = async () => {
-    if (text.trim() === '') {
-      Alert.alert("Playlist name required", "Please enter a name for your playlist.");
-      setText('');
+    if (text.trim() === "") {
+      Alert.alert(
+        "Playlist name required",
+        "Please enter a name for your playlist."
+      );
+      setText("");
       return;
     }
-    console.log('You created a new playlist!');
-    console.log('Playlist name: ', text);
-
-    let coverUri = null;
-
-    if (mode === 'songs' && hasEnoughCards && viewShotRef.current) {
-      try {
-        const uri = await viewShotRef.current.capture();
-        const manipulated = await ImageManipulator.manipulateAsync(
-          uri,
-          [{ resize: { width: 1080 } }],
-          { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
-        );
-        coverUri = manipulated.uri;
-      } catch (error) {
-        console.error("Error capturing collage:", error);
-      }
-    } else {
-      coverUri = 'https://ierqhxlamotfahrwcsdz.supabase.co/storage/v1/object/public/playlistImage//DefaultPlaylistCover.png';
-    }
-
-    let uploadedImageUrl = coverUri;
-    if (coverUri && coverUri.startsWith('file')) {
-      uploadedImageUrl = await uploadCoverToSupabase(coverUri, spotifyID);
-    }
-
-    const { data, error } = await supabase
-      .from('User')
-      .select('id')
-      .eq('spotifyID', spotifyID)
+    //Fetch user id
+    const { data: user, error } = await supabase
+      .from("User")
+      .select("id")
+      .eq("spotifyID", spotifyID)
       .single();
     if (error) {
-      console.error('Error fetching user:', error);
+      console.error("Error fetching user:", error);
       return;
     }
+    const createdBy = user.id;
 
-    const createdBy = data.id;
+    let description = ""
+    //Create playlist on spotify
+    const response = await createPlaylist(text, description)
+    const spotifyPlaylistID = response.id
+    let coverUri =
+      "https://ierqhxlamotfahrwcsdz.supabase.co/storage/v1/object/public/playlistImage//DefaultPlaylistCover.png";
+    //Add songs to newly create playlist (TO DO)
+    addTracksToPlaylist(spotifyPlaylistID, playlistSongs)
+
+    let uploadedImageUrl = coverUri;
+    if (coverUri && coverUri.startsWith("file")) {
+      await uploadCoverToSupabase(coverUri, spotifyID);
+    }
 
     const { data: insertedPlaylist, error: playlistError } = await supabase
-      .from('Playlist')
+      .from("Playlist")
       .insert({
         name: text,
         createdBy: createdBy,
         songs: null,
-        timeCreated: DateTime.now().setZone('America/Los_Angeles').toISO(),
+        timeCreated: DateTime.now().setZone("America/Los_Angeles").toISO(),
         description: "",
-        image: uploadedImageUrl ?? 'https://ierqhxlamotfahrwcsdz.supabase.co/storage/v1/object/public/playlistImage//DefaultPlaylistCover.png',
+        image:
+          uploadedImageUrl ??
+          "https://ierqhxlamotfahrwcsdz.supabase.co/storage/v1/object/public/playlistImage//DefaultPlaylistCover.png",
         privacy: "public",
-        spotifyIdPlaylist: null,
+        spotifyIdPlaylist: spotifyPlaylistID,
       })
       .select()
       .single();
@@ -187,14 +210,15 @@ export default function PlaylistScreen({ navigation }) {
       .single();
 
     if (fetchError) {
-      console.error("Error fetching user activityLog for playlistId update:", fetchError.message);
+      console.error(
+        "Error fetching user activityLog for playlistId update:",
+        fetchError.message
+      );
       return;
     }
 
     const updatedLog = userWithLog.activityLog.map((log) =>
-      log._id === sessionID
-        ? { ...log, playlistId: insertedPlaylist.id }
-        : log
+      log._id === sessionID ? { ...log, playlistId: insertedPlaylist.id } : log
     );
 
     const { error: logUpdateError } = await supabase
@@ -203,12 +227,15 @@ export default function PlaylistScreen({ navigation }) {
       .eq("spotifyID", spotifyID);
 
     if (logUpdateError) {
-      console.error("Error updating playlistId in activityLog:", logUpdateError.message);
+      console.error(
+        "Error updating playlistId in activityLog:",
+        logUpdateError.message
+      );
     } else {
       console.log("Successfully updated playlistId in activityLog!");
     }
 
-    navigation.navigate('PlaylistPreview', {
+    navigation.navigate("PlaylistPreview", {
       playlistName: text,
       playlistCover: coverUri,
     });

@@ -42,13 +42,24 @@ async function getAccessToken() {
 // Track IDs are passed as an array
 async function fetchTracks(trackIds) {
   try {
-    await getAccessToken(); // Ensure we have a valid token
-    const response = await spotifyApi.getTracks(trackIds);
-    return response.body.tracks; // Returns track details
+    await getAccessToken(); // Make sure token is fresh
+
+    const batchSize = 50;
+    const allTracks = [];
+
+    for (let i = 0; i < trackIds.length; i += batchSize) {
+      const batch = trackIds.slice(i, i + batchSize);
+      const response = await spotifyApi.getTracks(batch);
+      allTracks.push(...response.body.tracks);
+    }
+
+    return allTracks;
   } catch (error) {
     console.error('Error fetching tracks:', error);
+    return [];
   }
 }
+
 
 // Function to fetch artist details from Spotify
 // Artist IDs are passed as an array
@@ -56,8 +67,14 @@ async function fetchArtists(artistIds) {
     try {
       await getAccessToken();
       const response = await spotifyApi.getArtists(artistIds);
-      
-      return response.body.artists;
+
+      return response.body.artists.map(artist => ({
+            id: artist.id,
+            name: artist.name,
+            imageUrl: artist.images.length > 0 ? artist.images[0].url : null, // Get the first image
+            genres: artist.genres,
+            popularity: artist.popularity,
+        }));
     } catch (error) {
       console.error('Error fetching artist details:', error);
       return [];
@@ -66,6 +83,7 @@ async function fetchArtists(artistIds) {
 
 // Function to store tracks in Supabase
 async function storeTracksInSupabase(trackData) {
+  await getAccessToken();
   const song = trackData.map(track => ({
     title: track.name || null,
     spotifyURL: track.external_urls.spotify || null,
@@ -74,7 +92,7 @@ async function storeTracksInSupabase(trackData) {
     spotifyID: track.id,
     artistsID: track.artists.map(artist => artist.id)
   }));
-  
+
   try {
     const { data, error } = await supabase.from('Song').insert(song);
 
@@ -90,6 +108,7 @@ async function storeTracksInSupabase(trackData) {
 
 // Function to store artists in Supabase
 async function storeArtistsInSupabase(artistData) {
+  await getAccessToken();
     const artists = artistData.map(artist => ({
         name: artist.name,
         genres: artist.genres || [],
@@ -101,7 +120,7 @@ async function storeArtistsInSupabase(artistData) {
 
     try {
       const { data, error } = await supabase.from('Artist').insert(artists);
-  
+
       if (error) {
         console.error('Error inserting artists into Supabase:', error);
       } else {
@@ -115,10 +134,11 @@ async function storeArtistsInSupabase(artistData) {
 
 // Function to fetch and store tracks and their artists
 async function fetchAndStoreTracks(trackIds) {
+  await getAccessToken();
   const trackData = await fetchTracks(trackIds);
   if (trackData.length > 0) {
     await storeTracksInSupabase(trackData);
-    
+
     // Extract unique artist IDs
     const artistIds = [...new Set(trackData.flatMap(track => track.artists.map(artist => artist.id)))];
 
@@ -129,6 +149,149 @@ async function fetchAndStoreTracks(trackIds) {
     }
   }
 }
+
+async function startPlaylist(accessToken, playlistId, deviceId = null) {
+  await getAccessToken();
+  const endpoint = 'https://api.spotify.com/v1/me/player/play';
+  const playlistUri = `spotify:playlist:${playlistId}`;
+
+  const body = {
+    context_uri: playlistUri, // Example: "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M"
+  };
+
+  const url = deviceId ? `${endpoint}?device_id=${deviceId}` : endpoint;
+
+  const response = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (response.status === 204) {
+    console.log('Playback started successfully.');
+  } else {
+    const error = await response.json();
+    console.error('Failed to start playback:', error);
+  }
+}
+
+async function toggleShuffle(mode){
+  await getAccessToken();
+  spotifyApi.setShuffle(mode)
+  .then(function() {
+    console.log('Shuffle is on.');
+  }, function  (err) {
+    //if the user making the request is non-premium, a 403 FORBIDDEN response code will be returned
+    console.log('Something went wrong!', err);
+  });
+}
+
+async function removeTrackFromPlaylist(playlistId, trackID) {
+  try {
+    await getAccessToken();
+    // Get the current snapshot_id of the playlist
+    const data = await spotifyApi.getPlaylist(playlistId);
+    const snapshotId = data.body.snapshot_id;
+
+    // Prepare the track data and options with the snapshot_id
+    const tracks = [{ uri: `spotify:track:${trackID}` }];
+    const options = { snapshot_id: snapshotId };
+
+    // Remove the track from the playlist using the snapshot_id
+    await spotifyApi.removeTracksFromPlaylist(playlistId, tracks, options);
+
+  } catch (err) {
+    console.log('Error removing track from playlist', err);
+  }
+}
+
+async function addTracksToPlaylist(playlistId, trackIDs) {
+  try {
+    await getAccessToken(); // Ensure access token is valid
+
+    // Prepare the track data (Spotify URI format) for the array of track IDs
+    const tracks = trackIDs.map(trackID =>  `spotify:track:${trackID}`);
+
+    console.log("Tracks to be inserted", tracks)
+    // Add the tracks to the playlist
+    const data = await spotifyApi.addTracksToPlaylist(playlistId, tracks);
+
+    console.log('Tracks added to playlist successfully!', data.body);
+  } catch (err) {
+    console.log('Error adding tracks to playlist!', err);
+  }
+}
+const fetchPlaylistSongIDs = async (playlistId) => {
+  //limit the number of tracks to 50
+  try {
+    // First, ensure access token is obtained
+    await getAccessToken();
+
+    // Fetch playlist data
+    const playlistData = await spotifyApi.getPlaylistTracks(playlistId);
+
+    // Extract track IDs from the playlist data
+    const trackIds = playlistData.body.items.map(item => item.track.id)
+
+    // Return an array of track IDs
+    return trackIds;
+
+  } catch (error) {
+    console.error('Error fetching playlist:', error);
+    return [];  // Return null in case of an error
+  }
+  // try {
+  //   // First, ensure access token is obtained
+  //   await getAccessToken();
+
+  //   let trackIds = [];
+  //   let offset = 0;
+  //   let totalTracks = 1; // Initially set to 1 to enter the loop
+
+  //   // Loop through the pages of tracks (each page has a max of 50 items)
+  //   while (offset < totalTracks) {
+  //     // Fetch playlist data with pagination using offset
+  //     const playlistData = await spotifyApi.getPlaylistTracks(playlistId, { offset: offset });
+
+  //     // Extract track IDs from the playlist data
+  //     const currentTrackIds = playlistData.body.items.map(item => item.track.id);
+
+  //     // Append the current page of track IDs to the trackIds array
+  //     trackIds = trackIds.concat(currentTrackIds);
+
+  //     // Update the offset and totalTracks
+  //     offset += 50; // Move to the next page of results
+  //     totalTracks = playlistData.body.total; // Total number of tracks in the playlist
+  //   }
+
+  //   // Return the full list of track IDs
+  //   console.log('All Track IDs:', trackIds);
+  //   return trackIds;
+
+  // } catch (error) {
+  //   console.error('Error fetching playlist:', error);
+  //   return [];
+  // }
+};
+
+const createPlaylist = async (name, description) => {
+  try {
+    await getAccessToken(); // Set token
+    // Call Spotify Web API to create a new playlist for the user
+    const playlistData = await spotifyApi.createPlaylist(name, {
+      description: description,
+      public: true, // Set to true if you want the playlist to be public
+    });
+
+    console.log('Playlist created successfully!', playlistData.body);
+    return playlistData.body;
+  } catch (error) {
+    console.error('Error creating playlist:', error);
+  }
+};
 
 
 /**
@@ -147,4 +310,5 @@ async function fetchUser() {
   }
 }
 
-export { fetchAndStoreTracks, fetchTracks, fetchArtists, storeTracksInSupabase, storeArtistsInSupabase, fetchUser };
+
+export {addTracksToPlaylist, createPlaylist, fetchPlaylistSongIDs, removeTrackFromPlaylist, toggleShuffle, startPlaylist, fetchAndStoreTracks, fetchTracks, fetchArtists, storeTracksInSupabase, storeArtistsInSupabase, fetchUser };

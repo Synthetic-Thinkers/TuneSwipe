@@ -38,7 +38,9 @@ export default function login() {
         	"user-modify-playback-state",
         	"streaming",
         	"user-read-email",
-        	"user-read-private",
+          "user-read-private",
+          "playlist-modify-public",
+			    "playlist-modify-private"
       ],
       usePKCE: false,
 	  redirectUri: process.env.EXPO_PUBLIC_REDIRECT_URL ?? " "
@@ -219,7 +221,7 @@ const getRecentTracks = async (token: string, sID: string) => {
 
 		const recentTracksID = jsonData.items.map((item: {track: any; id: any; }) => item.track.id);
 		console.log("Top 20 recently played tracks:", recentTracksID);
-		
+
 		//Update User table
 		const{data, error} = await supabase
 			.from('User')
