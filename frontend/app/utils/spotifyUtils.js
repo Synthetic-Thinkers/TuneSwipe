@@ -183,7 +183,7 @@ async function startPlaylist(accessToken, playlistId, deviceId = null) {
     console.log('Playback started successfully.');
   } else {
     const error = await response.json();
-    console.error('Failed to start playback:', error);
+    // console.error('Failed to start playback:', error);
   }
 }
 

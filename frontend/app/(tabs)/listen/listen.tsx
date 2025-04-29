@@ -133,7 +133,6 @@ export default function ListenScreen() {
   // Get currently playing song from Spotify
   const fetchCurrentlyPlaying = async () => {
     if (!spotifyToken) {
-      console.log("No Spotify token available");
       //setError("Spotify token not available");
       return;
     }

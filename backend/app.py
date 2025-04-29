@@ -132,7 +132,7 @@ def get_swipe_recommendations():
     try:
         user_info = request.get_json()
 
-        songs = Song.query.order_by(func.random()).limit(10).all()
+        songs = Song.query.order_by(func.random()).limit(20).all()
 
         # Only return song IDs
         song_ids = [song.id for song in songs]

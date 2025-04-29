@@ -95,18 +95,21 @@ export default function SwipeScreen({ navigation }) {
 
   const fetchData = async () => {
     try {
-      const userInfo ={}
-      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/swipe-recommendations`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(userInfo), // Include the user info in the body
-      });
+      const userInfo = {};
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_API_URL}/swipe-recommendations`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(userInfo), // Include the user info in the body
+        }
+      );
       const songIDs = await response.json();
-      const songData = await fetchTracks(songIDs)
-      setMusicData(songData)
-      setLoading(false)
+      const songData = await fetchTracks(songIDs);
+      setMusicData(songData);
+      setLoading(false);
     } catch (error) {
       console.error("Error fetching search results:", error);
     }
@@ -130,24 +133,26 @@ export default function SwipeScreen({ navigation }) {
 
   useEffect(() => {
     if (accessToken) {
-      fetchData();
       fetchActivityLogs();
     }
   }, [accessToken, mode]);
 
+  //Fetch songs
+  useEffect(() => {
+    if(mode ==="songs" && accessToken)
+      fetchData();
+  },[accessToken])
 
 
   const goToSample = (spotifyID: string) => {
     navigation.navigate("Sample", { spotifyID });
   };
 
-  const handleSwipeRight = (cardIndex) => {
+  const handleSwipeRight = (cardIndex:any) => {
     // Every song swiped right will also be stored in an array for playlist.tsx (default for now)
     const likedCard = musicData[cardIndex].id;
 
-    console.log(
-      `Liked: ${musicData[cardIndex].name}`
-    );
+    console.log(`Liked: ${musicData[cardIndex].name}`);
     setSwipeResults((prevResults) => {
       const newResults = [
         ...prevResults,
@@ -158,9 +163,7 @@ export default function SwipeScreen({ navigation }) {
   };
 
   const handleSwipeLeft = (cardIndex) => {
-    console.log(
-      `Disliked: ${musicData[cardIndex].name}`
-    );
+    console.log(`Disliked: ${musicData[cardIndex].name}`);
     setSwipeResults((prevResults) => {
       const newResults = [
         ...prevResults,
@@ -192,13 +195,19 @@ export default function SwipeScreen({ navigation }) {
             .eq("spotifyID", spotifyID);
 
           if (error) throw error;
-
-          navigation.navigate("Playlist", {
-            spotifyID: spotifyID,
-            mode: mode,
-            activityLog: updatedLogs,
-            sessionID: sessionID,
-          });
+          let allDisliked = latestSwipeResults.every(
+            (song) => song.liked === false
+          );
+          if (allDisliked) {
+            navigation.navigate("Options");
+          } else {
+            navigation.navigate("Playlist", {
+              spotifyID: spotifyID,
+              mode: mode,
+              activityLog: updatedLogs,
+              sessionID: sessionID,
+            });
+          }
         } catch (error) {
           console.error("Error saving updated activity log:", error);
         }
@@ -243,7 +252,7 @@ export default function SwipeScreen({ navigation }) {
       </View>
     );
   }
-  
+
   return (
     <TouchableOpacity
       style={styles.blurView}
@@ -349,7 +358,8 @@ export default function SwipeScreen({ navigation }) {
                 <View style={styles.textContainer}>
                   {mode === "songs" ? (
                     <Text style={styles.songText}>
-                      {card.artists.map(artist => artist.name).join(", ")} - {card.name}
+                      {card.artists.map((artist) => artist.name).join(", ")} -{" "}
+                      {card.name}
                     </Text>
                   ) : (
                     <Text style={styles.songText}>{card.name}</Text>

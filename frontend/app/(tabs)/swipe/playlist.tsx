@@ -55,7 +55,7 @@ export default function PlaylistScreen({ navigation }) {
   const [gifLoaded, setGifLoaded] = useState(false);
   const [gifError, setGifError] = useState(false);
   const [playlistSongs, setPlaylistSongs] = useState([])
-
+  const [loading, setIsLoading] = useState(true)
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -123,6 +123,7 @@ export default function PlaylistScreen({ navigation }) {
           const songIDs = await response.json();
           console.log('Song IDs for the new playlist:', songIDs);
           setPlaylistSongs(songIDs)
+          setIsLoading(false)
         } else {
           // If the response is not successful, log the error
           const errorData = await response.json();
@@ -258,7 +259,7 @@ export default function PlaylistScreen({ navigation }) {
     });
   };
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded || loading) {
     return (
       <View style={styles.loadingContainer}>
         <Text style={styles.text}>
