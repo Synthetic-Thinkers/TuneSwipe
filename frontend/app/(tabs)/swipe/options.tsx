@@ -61,11 +61,8 @@ export default function OptionsScreen({ navigation }) {
       .eq("spotifyID", spotifyID)
       .single();
 
-    if (error) {
+    if (error) 
      console.error("Error fetching user:", error.message);
-    } else {
-     console.log("Fetched activity log:", data.activityLog);
-    }
 
     const existingLogs = data?.activityLog || [];
     const nextId = await getNextId();

@@ -98,12 +98,13 @@ export default function LibraryScreen() {
         <View style={styles.headerContainer}>
           <Text style={styles.header2}>Recently Created Playlists</Text>
         </View>
-        {playlists
-          .slice(-2)
+        {[...playlists]
+          .sort((a, b) => (a.id > b.id ? 1 : -1)) // sort ascending
+          .slice(-2) // take last two (i.e., largest ids)
           .reverse()
           .map((playlist) => (
             <PlaylistItem
-              key={playlist.id} // Assuming each playlist has a unique id
+              key={playlist.id}
               onPress={() => onPress(playlist)}
               title={playlist.name}
               description={playlist.description}
@@ -130,7 +131,7 @@ export default function LibraryScreen() {
         </View>
 
         <View style={styles.playlistContainer}>
-          {playlists.map((playlist) => {
+          {playlists.sort((a, b) => (a.id > b.id ? 1 : -1)).map((playlist) => {
             const playlistIcon = renderItem(playlist);
             return playlistIcon;
           })}

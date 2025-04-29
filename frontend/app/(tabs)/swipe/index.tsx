@@ -44,7 +44,6 @@ export default function IndexScreen({ navigation }) {
       } else if (data) {
         setUsername(data.userName);
         setAvatarURL(data.avatarURL);
-        console.log("Fetched data: ", data.userName);
       } else {
         console.log("No user found with this Spotify ID.");
       }
