@@ -83,37 +83,6 @@ export default function SwipeScreen({ navigation }) {
     likedCardsRef.current = likedCards;
   }, [likedCards]);
 
-  const extractArtistsIds = (musicData) => {
-    const allArtistsIds = musicData.flatMap(song => song.artistsID);
-    console.log('All artists ids:', allArtistsIds);
-    return allArtistsIds;
-  };
-
-  // const fetchArtistsDetails = async (artistsIDs, accessToken) => {
-  //   if (artistsIDs.length === 0) return;
-
-  //   try {
-  //     const idsParam = artistsIDs.join(",");
-
-  //     const response = await fetch(`https://api.spotify.com/v1/artists?ids=${idsParam}`, {
-  //       headers: {
-  //         Authorization: `Bearer ${accessToken}`,
-  //       },
-  //     });
-
-  //     if (!response.ok) throw new Error("Failed to fetch artist details");
-
-  //     const data = await response.json();
-
-  //     const artistNames = data.artists.map((artist) => artist.name);
-  //     console.log('Artists Names:', artistNames);
-  //     return artistNames;
-  //   } catch (error) {
-  //     console.error("Error fetching artist details from Spotify:", error);
-  //     return [];
-  //   }
-  // };
-
   const fetchData = async () => {
     let data;
     if (mode === 'songs') {
@@ -124,7 +93,7 @@ export default function SwipeScreen({ navigation }) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(userInfo), // Include the user info in the body
+        body: JSON.stringify(userInfo),
       });
       const songIDs = await response.json();
       const songData = await fetchTracks(songIDs)
@@ -146,7 +115,7 @@ export default function SwipeScreen({ navigation }) {
           if (!response.ok) {
               throw new Error("Failed to fetch random artists");
           }
-          const artistIDs = await response.json(); // Assuming the backend returns an array of artist IDs
+          const artistIDs = await response.json();
           console.log("Fetched artist IDs:", artistIDs);
           // Fetch artist details using fetchArtists from spotifyUtils.js
         const artistData = await fetchArtists(artistIDs);
@@ -170,7 +139,6 @@ export default function SwipeScreen({ navigation }) {
       setMusicData(data);
       setLoading(false);
     }
-    // setMusicData(musicData || []);
   }
 
   const fetchActivityLogs = async () => {
@@ -307,9 +275,11 @@ export default function SwipeScreen({ navigation }) {
             <View style={styles.startCardContainer}>
               <Image
                 source={
-                  mode=='songs' && firstCard.album.images[0]
-                    ? { uri: firstCard.album.images[0].url }
-                    : require("../../../assets/images/defaultImage.png")
+                  mode === 'songs' && firstCard.album.images[0]
+                  ? { uri: firstCard.album.images[0].url }
+                  : mode === 'artists' && firstCard.imageUrl
+                  ? { uri: firstCard.imageUrl }
+                  : require("../../../assets/images/defaultImage.png")
                 }
                 style={styles.image}
               />

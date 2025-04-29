@@ -115,7 +115,7 @@ export default function IndexScreen({ navigation }) {
 
       // Send recent tracks to backend
       try {
-        const response = await axios.post("http://192.168.1.16:5000/recent-tracks", {
+        const response = await axios.post(`${process.env.EXPO_PUBLIC_API_URL}/recent-tracks`, {
           user_id: spotifyID,
           artists: artists,
         });

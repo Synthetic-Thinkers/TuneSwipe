@@ -101,6 +101,12 @@ export default function PlaylistScreen({ navigation }) {
         if (response.ok) {
           const songIDs = await response.json();
           console.log('Song IDs for the new playlist:', songIDs);
+
+          if (!songIDs || songIDs.length === 0) {
+          console.error("No songs were returned from the backend.");
+          return;
+          }
+
           setPlaylistSongs(songIDs)
         } else {
           // If the response is not successful, log the error

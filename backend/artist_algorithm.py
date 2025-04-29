@@ -66,7 +66,7 @@ similar_artists_data = {}
 @app.route('/recent-tracks', methods=['POST'])
 def get_recent_tracks():
   # Get data from the request
-  data = request.get_json()  # This parses the incoming JSON data
+  data = request.get_json()
   user_id = data.get('user_id')
   artists = data.get('artists')
 
@@ -114,7 +114,6 @@ def get_similar_artists(artist_name):
 
 # Batch Similar Artists into a single request
 def batch_similar_artists(artists):
-    # data = request.get_json()
     artists = artists.get('artists')
 
     if not artists:
@@ -179,7 +178,6 @@ def select_random_artists(all_artists):
         return {"error": "No artists provided"}, 400
     if len(all_artists) > 10:
         random_artists = random.sample(all_artists, 10)
-    # print("10 Random artists:", random_artists)
     return random_artists
 
 @app.route('/random-artists', methods=['GET'])
@@ -254,33 +252,128 @@ def input_preprocessor_by_artist(artist_id, dataset, features):
     song_vectors = artist_songs[features].values
     return np.mean(song_vectors, axis=0)  # 1D vector
 
-def music_recommender_by_artist(artist_id, dataset, song_cluster_pipeline, features, metadata_cols, n_songs=30):
-    # Get song center vector for artist
-    song_center = input_preprocessor_by_artist(artist_id, dataset, features)
+def music_recommender_by_artist(liked_artists, dataset, song_cluster_pipeline, features, metadata_cols, n_songs=30):
+    # Shuffle the liked artists to ensure randomness
+    random.shuffle(liked_artists)
 
-    if song_center is None:
+    # Allocate half of the playlist to songs by the liked artists
+    liked_artist_quota = n_songs // 2
+    per_artist_quota = max(1, liked_artist_quota // len(liked_artists))  # Divide quota among liked artists
+
+    # Collect unique songs only
+    seen_names = set()
+    unique_recs = []
+
+    # Step 1: Collect songs from all liked artists
+    for artist_id in liked_artists:
+        artist_songs = dataset[dataset['artist_ids'].apply(lambda ids: artist_id in ids if ids else False)]
+        if not artist_songs.empty:
+            # Randomly select songs from the liked artist's songs
+            liked_artist_songs = artist_songs.sample(min(len(artist_songs), per_artist_quota))
+            for _, song in liked_artist_songs.iterrows():
+                if song['name'] not in seen_names:
+                    unique_recs.append(song)
+                    seen_names.add(song['name'])
+                if len(unique_recs) == liked_artist_quota:
+                    break
+        if len(unique_recs) == liked_artist_quota:
+            break
+
+    # Step 2: Fill remaining slots with similar songs
+    # Get song center vector for all liked artists
+    song_centers = []
+    for artist_id in liked_artists:
+        song_center = input_preprocessor_by_artist(artist_id, dataset, features)
+        if song_center is not None:
+            song_centers.append(song_center)
+
+    if not song_centers:
         return pd.DataFrame()
 
-    # Scale full dataset + the artist vector
+    # Compute the average center for all liked artists
+    avg_song_center = np.mean(song_centers, axis=0)
+
+    # Scale full dataset + the average artist vector
     scaler = song_cluster_pipeline.steps[0][1]
     scaled_data = scaler.transform(dataset[features])
-    scaled_center = scaler.transform(song_center.reshape(1, -1))
+    scaled_center = scaler.transform(avg_song_center.reshape(1, -1))
 
     # Compute distances
     distances = euclidean_distances(scaled_center, scaled_data)
     sorted_indices = np.argsort(distances[0])
 
-    # Collect unique songs only
-    seen_names = set()
-    unique_recs = []
+    # Fill remaining slots with the best-fit similar songs
     for idx in sorted_indices:
+        if len(unique_recs) == n_songs:
+            break
         song = dataset.iloc[idx]
         name = song['name']
         if name not in seen_names:
             unique_recs.append(song)
             seen_names.add(name)
-        if len(unique_recs) == n_songs:
-            break
+
+
+    # Get song center vector for artist
+    # song_center = input_preprocessor_by_artist(artist_id, dataset, features)
+
+    # if song_center is None:
+    #     return pd.DataFrame()
+
+    # # Scale full dataset + the artist vector
+    # scaler = song_cluster_pipeline.steps[0][1]
+    # scaled_data = scaler.transform(dataset[features])
+    # scaled_center = scaler.transform(song_center.reshape(1, -1))
+
+    # # Compute distances
+    # distances = euclidean_distances(scaled_center, scaled_data)
+    # sorted_indices = np.argsort(distances[0])
+
+    # # Collect unique songs only
+    # seen_names = set()
+    # unique_recs = []
+
+    # # Allocate half of the playlist to songs by the liked artists
+    # liked_artist_quota = n_songs // 2
+    # per_artist_quota = max(1, liked_artist_quota // len(liked_artists))
+
+    # # Step 1: Collect all songs by the liked artist
+    # artist_songs = dataset[dataset['artist_ids'].apply(lambda ids: artist_id in ids if ids else False)]
+    # if not artist_songs.empty:
+    #     # Randomly select songs from the liked artist's songs
+    #     liked_artist_songs = artist_songs.sample(min(len(artist_songs), liked_artist_quota))
+    #     for _, song in liked_artist_songs.iterrows():
+    #         if song['name'] not in seen_names:
+    #             unique_recs.append(song)
+    #             seen_names.add(song['name'])
+
+    # # Step 2: Fill remaining slots with similar songs
+    # for idx in sorted_indices:
+    #     if len(unique_recs) == n_songs:
+    #         break
+    #     song = dataset.iloc[idx]
+    #     name = song['name']
+    #     if name not in seen_names:
+    #         unique_recs.append(song)
+    #         seen_names.add(name)
+
+    # for idx in sorted_indices:
+    #     song = dataset.iloc[idx]
+    #     name = song['name']
+    #     if name not in seen_names:
+    #         unique_recs.append(song)
+    #         seen_names.add(name)
+    #     if len(unique_recs) == n_songs:
+    #         break
+
+    #   # Add more songs by the liked artist
+    # artist_songs = dataset[dataset['artist_ids'].apply(lambda ids: artist_id in ids if ids else False)]
+    # if not artist_songs.empty:
+    #     for _, song in artist_songs.iterrows():
+    #         if song['name'] not in seen_names:
+    #             unique_recs.append(song)
+    #             seen_names.add(song['name'])
+    #         if len(unique_recs) == n_songs:
+    #             break
 
     # Convert list of Series back to DataFrame
     recs_df = pd.DataFrame(unique_recs)
@@ -302,34 +395,56 @@ def generate_playlist():
 
     print("Liked Artists:", liked_artists)
 
-    # Generate recommendations for each liked artist
-    all_recommendations = []
-    for artist_id in liked_artists:
-        recommendations = music_recommender_by_artist(
-            artist_id=artist_id,
-            dataset=df,
-            song_cluster_pipeline=song_cluster_pipeline,
-            features=features,
-            metadata_cols=metadata_cols,
-            n_songs=30  # Adjust the number of songs per artist if needed
-        )
-        if not recommendations.empty:
-            all_recommendations.append(recommendations)
+    # Generate recommendations for all liked artists
+    recommendations = music_recommender_by_artist(
+        liked_artists=liked_artists,
+        dataset=df,
+        song_cluster_pipeline=song_cluster_pipeline,
+        features=features,
+        metadata_cols=metadata_cols,
+        n_songs=30  # Adjust the number of songs per playlist
+    )
 
-    # Combine all recommendations into a single DataFrame
-    if all_recommendations:
-        final_recommendations = pd.concat(all_recommendations).drop_duplicates(subset='id').head(30)
-    else:
+    if recommendations.empty:
         return {"error": "No recommendations could be generated"}, 400
 
     # Convert the recommendations to a list of dictionaries
-    playlist = final_recommendations.to_dict(orient='records')
+    playlist = recommendations.to_dict(orient='records')
 
-     # Store only the song IDs in a separate variable
-    song_ids = final_recommendations['id'].tolist()
+    # Store only the song IDs in a separate variable
+    song_ids = recommendations['id'].tolist()
 
     print("Generated Playlist:", playlist)
     return jsonify(song_ids), 200
+
+    # # Generate recommendations for each liked artist
+    # all_recommendations = []
+    # for artist_id in liked_artists:
+    #     recommendations = music_recommender_by_artist(
+    #         artist_id=artist_id,
+    #         dataset=df,
+    #         song_cluster_pipeline=song_cluster_pipeline,
+    #         features=features,
+    #         metadata_cols=metadata_cols,
+    #         n_songs=30  # Adjust the number of songs per artist if needed
+    #     )
+    #     if not recommendations.empty:
+    #         all_recommendations.append(recommendations)
+
+    # # Combine all recommendations into a single DataFrame
+    # if all_recommendations:
+    #     final_recommendations = pd.concat(all_recommendations).drop_duplicates(subset='id').head(30)
+    # else:
+    #     return {"error": "No recommendations could be generated"}, 400
+
+    # # Convert the recommendations to a list of dictionaries
+    # playlist = final_recommendations.to_dict(orient='records')
+
+    #  # Store only the song IDs in a separate variable
+    # song_ids = final_recommendations['id'].tolist()
+
+    # print("Generated Playlist:", playlist)
+    # return jsonify(song_ids), 200
 
 
 
