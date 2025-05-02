@@ -49,13 +49,14 @@ type RouteParams = {
 
 export default function PlaylistScreen({ navigation }) {
   const route = useRoute();
-  const { spotifyID, mode, activityLog, sessionID } = route.params;
+   const { likedCards, spotifyID, mode, activityLog, sessionID, dislikedArtists } = route.params;
   const [text, setText] = useState("");
   const inputRef = React.useRef(null);
   const [gifLoaded, setGifLoaded] = useState(false);
   const [gifError, setGifError] = useState(false);
   const [playlistSongs, setPlaylistSongs] = useState([])
   const [loading, setIsLoading] = useState(true)
+
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -63,6 +64,10 @@ export default function PlaylistScreen({ navigation }) {
     Inter_700Bold,
     Inter_800ExtraBold,
   });
+
+  useEffect(() => {
+    console.log("Received in playlist.tsx:", route.params?.likedCards);
+  }, []);
 
   useEffect(() => {
     const markSessionAsCompleted = async () => {
@@ -108,30 +113,64 @@ export default function PlaylistScreen({ navigation }) {
 
   //Get playlist recommendation
   useEffect(() => {
-    async function getRecommendations(){ 
-      try{
-        const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/create-playlist`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            activityLog: activityLog[activityLog.length - 1]
-          }), //send recent swipe results 
-        });
-        if (response.ok) {
-          const songIDs = await response.json();
-          console.log('Song IDs for the new playlist:', songIDs);
-          setPlaylistSongs(songIDs)
-          setIsLoading(false)
-        } else {
-          // If the response is not successful, log the error
-          const errorData = await response.json();
-          console.error('Error creating playlist:', errorData.error);
-          throw new Error(errorData.error);
+    async function getRecommendations() {
+      if (mode === "songs") {
+        try {
+          const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/create-playlist`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              activityLog: activityLog[activityLog.length - 1]
+            }), //send recent swipe results
+          });
+          if (response.ok) {
+            const songIDs = await response.json();
+            console.log('Song IDs for the new playlist:', songIDs);
+            setPlaylistSongs(songIDs)
+            setIsLoading(false)
+          } else {
+            // If the response is not successful, log the error
+            const errorData = await response.json();
+            console.error('Error creating playlist:', errorData.error);
+            throw new Error(errorData.error);
+          }
+        } catch (error) {
+          console.log(error)
         }
-      }catch(error){
-        console.log(error)
+      } else if (mode === "artists") {
+        try{
+          const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/generate-playlist`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              liked_artists: likedCards,
+              disliked_artists: dislikedArtists,
+            }), //send recent swipe results
+          });
+          if (response.ok) {
+            const songIDs = await response.json();
+            console.log('Song IDs for the new playlist:', songIDs);
+
+            if (!songIDs || songIDs.length === 0) {
+            console.error("No songs were returned from the backend.");
+            return;
+            }
+
+            setPlaylistSongs(songIDs)
+            setIsLoading(false)
+          } else {
+            // If the response is not successful, log the error
+            const errorData = await response.json();
+            console.error('Error creating playlist:', errorData.error);
+            throw new Error(errorData.error);
+          }
+        }catch(error){
+          console.log(error)
+        }
       }
     }
 
@@ -171,7 +210,7 @@ export default function PlaylistScreen({ navigation }) {
       setText("");
       return;
     }
-    //Fetch user id 
+    //Fetch user id
     const { data: user, error } = await supabase
       .from("User")
       .select("id")

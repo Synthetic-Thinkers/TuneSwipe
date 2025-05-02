@@ -82,13 +82,33 @@ async function fetchArtists(artistIds) {
 
     // Flatten the array of results
     const allArtists = artistResponses.flat();
-    
+
     return allArtists;
   } catch (error) {
     console.error('Error fetching artist details:', error);
     return [];
   }
 }
+
+// Function to fetch artist details from Spotify
+// Artist IDs are passed as an array
+async function fetchArtistsInfo(artistIds) {
+    try {
+      await getAccessToken();
+      const response = await spotifyApi.getArtists(artistIds);
+
+      return response.body.artists.map(artist => ({
+            id: artist.id,
+            name: artist.name,
+            imageUrl: artist.images.length > 0 ? artist.images[0].url : null, // Get the first image
+            genres: artist.genres,
+            popularity: artist.popularity,
+        }));
+    } catch (error) {
+      console.error('Error fetching artist details:', error);
+      return [];
+    }
+  }
 
 // Function to store tracks in Supabase
 async function storeTracksInSupabase(trackData) {
@@ -101,7 +121,7 @@ async function storeTracksInSupabase(trackData) {
     spotifyID: track.id,
     artistsID: track.artists.map(artist => artist.id)
   }));
-  
+
   try {
     const { data, error } = await supabase.from('Song').insert(song);
 
@@ -129,7 +149,7 @@ async function storeArtistsInSupabase(artistData) {
 
     try {
       const { data, error } = await supabase.from('Artist').insert(artists);
-  
+
       if (error) {
         console.error('Error inserting artists into Supabase:', error);
       } else {
@@ -147,7 +167,7 @@ async function fetchAndStoreTracks(trackIds) {
   const trackData = await fetchTracks(trackIds);
   if (trackData.length > 0) {
     await storeTracksInSupabase(trackData);
-    
+
     // Extract unique artist IDs
     const artistIds = [...new Set(trackData.flatMap(track => track.artists.map(artist => artist.id)))];
 
@@ -204,14 +224,14 @@ async function removeTrackFromPlaylist(playlistId, trackID) {
     // Get the current snapshot_id of the playlist
     const data = await spotifyApi.getPlaylist(playlistId);
     const snapshotId = data.body.snapshot_id;
-    
+
     // Prepare the track data and options with the snapshot_id
     const tracks = [{ uri: `spotify:track:${trackID}` }];
     const options = { snapshot_id: snapshotId };
-    
+
     // Remove the track from the playlist using the snapshot_id
     await spotifyApi.removeTracksFromPlaylist(playlistId, tracks, options);
-    
+
   } catch (err) {
     console.log('Error removing track from playlist', err);
   }
@@ -223,7 +243,7 @@ async function addTracksToPlaylist(playlistId, trackIDs) {
 
     // Prepare the track data (Spotify URI format) for the array of track IDs
     const tracks = trackIDs.map(trackID =>  `spotify:track:${trackID}`);
-    
+
     console.log("Tracks to be inserted", tracks)
     // Add the tracks to the playlist
     const data = await spotifyApi.addTracksToPlaylist(playlistId, tracks);
@@ -237,7 +257,7 @@ const fetchPlaylistSongIDs = async (playlistId) => {
   //limit the number of tracks to 50
   try {
     // First, ensure access token is obtained
-    await getAccessToken(); 
+    await getAccessToken();
 
     // Fetch playlist data
     const playlistData = await spotifyApi.getPlaylistTracks(playlistId);
@@ -304,6 +324,27 @@ const createPlaylist = async (name, description) => {
 
 
 /**
+ * Fetches the cover image(s) for a Spotify playlist.
+ * @param {string} playlistId - The Spotify playlist ID.
+ * @returns {Promise<object[]>} - An array of cover image objects (URL, height, width).
+ */
+async function fetchPlaylistCoverImage(playlistId) {
+  try {
+    await getAccessToken(); // Ensure the access token is set
+
+    // Call Spotify's Get Playlist Cover Image API
+    const response = await spotifyApi.getPlaylistCoverImage(playlistId);
+
+    // Return the array of cover image objects
+    console.log('Playlist cover images:', response.body);
+    return response.body; // Array of image objects
+  } catch (error) {
+    console.error('Error fetching playlist cover image:', error);
+    return []; // Return an empty array in case of an error
+  }
+}
+
+/**
  * Fetches Spotify user profile using an access token.
  * @param {string} accessToken - Spotify OAuth access token.
  * @returns {Promise<object>} - User profile data.
@@ -319,5 +360,5 @@ async function fetchUser() {
   }
 }
 
- 
-export {addTracksToPlaylist, createPlaylist, fetchPlaylistSongIDs, removeTrackFromPlaylist, toggleShuffle, startPlaylist, fetchAndStoreTracks, fetchTracks, fetchArtists, storeTracksInSupabase, storeArtistsInSupabase, fetchUser };
+
+export {addTracksToPlaylist, createPlaylist, fetchPlaylistSongIDs, removeTrackFromPlaylist, toggleShuffle, startPlaylist, fetchAndStoreTracks, fetchTracks, fetchArtists, storeTracksInSupabase, storeArtistsInSupabase, fetchUser, fetchArtistsInfo, fetchPlaylistCoverImage };

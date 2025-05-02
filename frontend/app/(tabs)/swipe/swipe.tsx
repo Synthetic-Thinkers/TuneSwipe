@@ -25,7 +25,8 @@ import { useRoute } from "@react-navigation/native";
 import { supabase } from "@/supabase";
 import { BlurView } from "expo-blur";
 import AntDesign from "@expo/vector-icons/AntDesign";
-import { fetchTracks } from "@/app/utils/spotifyUtils";
+import axios from "axios";
+import { fetchTracks, fetchArtistsInfo } from "@/app/utils/spotifyUtils";
 
 type ActivityLog = {
   _id: number;
@@ -63,6 +64,11 @@ export default function SwipeScreen({ navigation }) {
   const swipeResultsRef = useRef(swipeResults);
   const [gifLoaded, setGifLoaded] = useState(false);
   const [gifError, setGifError] = useState(false);
+  const likedCardsRef = useRef<any[]>([]);
+  const [likedCards, setLikedCards] = useState<any[]>([]);
+  const [likedArtists, setRandomArtists] = useState([]);
+  const [dislikedArtists, setDislikedArtists] = useState<any[]>([]);
+  const dislikedArtistsRef = useRef<string[]>([]);
 
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -93,25 +99,88 @@ export default function SwipeScreen({ navigation }) {
     swipeResultsRef.current = swipeResults;
   }, [swipeResults]);
 
+  useEffect(() => {
+    likedCardsRef.current = likedCards;
+  }, [likedCards]);
+
+
+  const fetchDislikedArtist = async () => {
+  const { data, error } = await supabase
+    .from("User")
+    .select("dislikedArtists")
+    .eq("spotifyID", spotifyID)
+    .single();
+
+  if (error) {
+    console.error("Error fetching disliked artists:", error.message);
+    return;
+  }
+
+  const dislikedArtists = data?.dislikedArtists || [];
+  setDislikedArtists(dislikedArtists);
+  dislikedArtistsRef.current = dislikedArtists; // Update the ref
+  };
+
+
   const fetchData = async () => {
-    try {
-      const userInfo = {};
-      const response = await fetch(
-        `${process.env.EXPO_PUBLIC_API_URL}/swipe-recommendations`,
-        {
+    let data;
+    if (mode === 'songs') {
+      try {
+        const userInfo = {}
+        const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/swipe-recommendations`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(userInfo), // Include the user info in the body
+          body: JSON.stringify(userInfo),
+        });
+        const songIDs = await response.json();
+        const songData = await fetchTracks(songIDs)
+        setMusicData(songData)
+        setLoading(false)
+      } catch (error) {
+        console.error("Error fetching search results:", error);
+      }
+    } else if (mode === 'artists') {
+      try {
+        // Fetch random artists from the backend
+        const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/random-artists`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            user_id: spotifyID,
+            disliked_artists: dislikedArtistsRef.current, // Include dislikedArtists in the request body
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch random artists");
         }
-      );
-      const songIDs = await response.json();
-      const songData = await fetchTracks(songIDs);
-      setMusicData(songData);
+        const artistIDs = await response.json();
+        console.log("Fetched artist IDs:", artistIDs);
+        // Fetch artist details using fetchArtists from spotifyUtils.js
+        const artistData = await fetchArtistsInfo(artistIDs);
+        console.log("Fetched artist data:", artistData);
+        setMusicData(artistData);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching artists:", error);
+      }
+    } else if (mode === 'genres') {
+      const { data: genreData, error } = await supabase
+        .from('Genre')
+        .select('*')
+        .limit(10)
+      if (error) {
+        console.error('Error fetching genres:', error);
+        return;
+      }
+      data = genreData;
+      console.log(data);
+      setMusicData(data);
       setLoading(false);
-    } catch (error) {
-      console.error("Error fetching search results:", error);
     }
   };
 
@@ -137,11 +206,17 @@ export default function SwipeScreen({ navigation }) {
     }
   }, [accessToken, mode]);
 
-  //Fetch songs
   useEffect(() => {
-    if(mode ==="songs" && accessToken)
-      fetchData();
-  },[accessToken])
+    const fetchAllData = async () => {
+      if (accessToken) {
+        await fetchDislikedArtist(); // Wait for fetchDislikedArtist to complete
+        await fetchData(); // Then call fetchData
+        fetchActivityLogs(); // This can run independently
+      }
+    };
+
+    fetchAllData();
+  }, [accessToken, mode]);
 
 
   const goToSample = (spotifyID: string) => {
@@ -149,8 +224,12 @@ export default function SwipeScreen({ navigation }) {
   };
 
   const handleSwipeRight = (cardIndex:any) => {
-    // Every song swiped right will also be stored in an array for playlist.tsx (default for now)
+     // Every song swiped right will also be stored in an array for playlist.tsx (default for now)
     const likedCard = musicData[cardIndex].id;
+    // Add the liked card to the likedCards array
+    setLikedCards((prevLikedCards) => [...prevLikedCards, likedCard]);
+
+    console.log("Liked Cards Array:", likedCardsRef.current);
 
     console.log(`Liked: ${musicData[cardIndex].name}`);
     setSwipeResults((prevResults) => {
@@ -180,6 +259,7 @@ export default function SwipeScreen({ navigation }) {
       const latestSwipeResults = [...swipeResultsRef.current];
 
       console.log("LATEST SWIPE RESULTS:", latestSwipeResults);
+      console.log("LIKED CARDS:", likedCardsRef.current);
 
       if (latestSwipeResults.length === musicData.length) {
         const updatedLogs = activityLogs.map((log) =>
@@ -206,6 +286,8 @@ export default function SwipeScreen({ navigation }) {
               mode: mode,
               activityLog: updatedLogs,
               sessionID: sessionID,
+              likedCards: likedCardsRef.current,
+              dislikedArtists: dislikedArtistsRef.current,
             });
           }
         } catch (error) {
@@ -217,6 +299,7 @@ export default function SwipeScreen({ navigation }) {
 
   const onPressStart = () => setShowBlur(false);
   const firstCard = musicData[0];
+
   if (loading || !fontsLoaded) {
     return (
       <View style={styles.loadingContainer}>
@@ -266,9 +349,11 @@ export default function SwipeScreen({ navigation }) {
             <View style={styles.startCardContainer}>
               <Image
                 source={
-                  firstCard.album.images[0]
-                    ? { uri: firstCard.album.images[0].url }
-                    : require("../../../assets/images/defaultImage.png")
+                  mode === 'songs' && firstCard.album.images[0]
+                  ? { uri: firstCard.album.images[0].url }
+                  : mode === 'artists' && firstCard.imageUrl
+                  ? { uri: firstCard.imageUrl }
+                  : require("../../../assets/images/defaultImage.png")
                 }
                 style={styles.image}
               />
@@ -364,9 +449,9 @@ export default function SwipeScreen({ navigation }) {
                   ) : (
                     <Text style={styles.songText}>{card.name}</Text>
                   )}
-                  {mode !== "genres" && firstCard.genres && (
+                  {mode !== "genres" && card.genres && (
                     <Text style={styles.genreText}>
-                      {firstCard.genres.join(" + ")}
+                      {card.genres.join(" + ")}
                     </Text>
                   )}
                 </View>
